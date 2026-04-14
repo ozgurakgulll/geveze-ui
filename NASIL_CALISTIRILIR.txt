@@ -1,0 +1,19 @@
+Geveze CRM - Calistirma Notu
+
+Gereksinim:
+- Node.js (LTS surumu)
+
+Kurulum ve Calistirma:
+1) Terminal ac
+2) Proje klasorune gir:
+   cd "Geveze CRM/app"
+3) Bagimliliklari yukle:
+   npm install
+4) Calistir:
+   npm run dev
+
+Tarayicida ac:
+http://localhost:5173
+
+Not:
+Bu proje sadece arayuzdur, sunucu gerektirmez.

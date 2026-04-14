@@ -1,0 +1,103 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+msgid "Dashboard"
+msgstr "Dashboard"
+
+msgid "Tasks"
+msgstr "Tasks"
+
+msgid "People"
+msgstr "People"
+
+msgid "Companies"
+msgstr "Companies"
+
+msgid "Opportunities"
+msgstr "Opportunities"
+
+msgid "Calendar"
+msgstr "Calendar"
+
+msgid "Add Task"
+msgstr "Add Task"
+
+msgid "Task Title"
+msgstr "Task Title"
+
+msgid "Task Description"
+msgstr "Task Description"
+
+msgid "Due Date"
+msgstr "Due Date"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Assigned To"
+msgstr "Assigned To"
+
+msgid "In Progress"
+msgstr "In Progress"
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Todo"
+msgstr "Todo"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Edit"
+msgstr "Edit"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Profile"
+msgstr "Profile"
+
+msgid "Logout"
+msgstr "Logout"
+
+msgid "Login"
+msgstr "Login"
+
+msgid "Sign Up"
+msgstr "Sign Up"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Loading..."
+msgstr "Loading..."
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Success"
+msgstr "Success"
+
+msgid "No data"
+msgstr "No data"
+
+msgid "Create"
+msgstr "Create"
+
+msgid "Update"
+msgstr "Update"

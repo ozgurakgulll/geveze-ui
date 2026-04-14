@@ -1,0 +1,103 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: tr\n"
+
+msgid "Dashboard"
+msgstr "Pano"
+
+msgid "Tasks"
+msgstr "Görevler"
+
+msgid "People"
+msgstr "Kişiler"
+
+msgid "Companies"
+msgstr "Şirketler"
+
+msgid "Opportunities"
+msgstr "Fırsatlar"
+
+msgid "Calendar"
+msgstr "Takvim"
+
+msgid "Add Task"
+msgstr "Görev Ekle"
+
+msgid "Task Title"
+msgstr "Görev Başlığı"
+
+msgid "Task Description"
+msgstr "Görev Açıklaması"
+
+msgid "Due Date"
+msgstr "Bitiş Tarihi"
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "Assigned To"
+msgstr "Atanan Kişi"
+
+msgid "In Progress"
+msgstr "Devam Ediyor"
+
+msgid "Completed"
+msgstr "Tamamlandı"
+
+msgid "Todo"
+msgstr "Yapılacak"
+
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "Delete"
+msgstr "Sil"
+
+msgid "Edit"
+msgstr "Düzenle"
+
+msgid "Settings"
+msgstr "Ayarlar"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Logout"
+msgstr "Çıkış Yap"
+
+msgid "Login"
+msgstr "Giriş Yap"
+
+msgid "Sign Up"
+msgstr "Kaydol"
+
+msgid "Email"
+msgstr "E-posta"
+
+msgid "Password"
+msgstr "Şifre"
+
+msgid "Name"
+msgstr "Ad"
+
+msgid "Loading..."
+msgstr "Yükleniyor..."
+
+msgid "Error"
+msgstr "Hata"
+
+msgid "Success"
+msgstr "Başarı"
+
+msgid "No data"
+msgstr "Veri yok"
+
+msgid "Create"
+msgstr "Oluştur"
+
+msgid "Update"
+msgstr "Güncelle"
