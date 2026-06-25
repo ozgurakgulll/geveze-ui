@@ -123,6 +123,8 @@ export interface Task {
   status: TaskStatus;
   priority: Priority;
   assignee?: User;
+  assigneeId?: string;
+  assigneeName?: string;
   portfolioCompanyId?: string;
   portfolioCompanyName?: string;
   dueDate?: Date;
