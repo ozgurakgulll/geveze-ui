@@ -46,7 +46,9 @@ export class PortfolioService {
     const existing = await this.model.findById(id).exec();
     if (!existing) throw new NotFoundException(`Portfolio company ${id} bulunamadı`);
 
-    Object.assign(existing, dto);
+    // activityLog'u dto'dan çıkar — geçmiş kayıtların üzerine yazılmasını önler
+    const { activityLog: _log, ...rest } = dto as Record<string, unknown>;
+    Object.assign(existing, rest);
     existing.activityLog = [
       ...(existing.activityLog ?? []),
       this.makeLog('Portfolio updated', `${dto.name ?? existing.name} portföy kaydı güncellendi.`),

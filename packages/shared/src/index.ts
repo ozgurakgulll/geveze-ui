@@ -106,6 +106,8 @@ export interface TableColumnSchemaItem {
 // Ana Varlık Arayüzleri
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type AppRole = 'admin' | 'manager' | 'member';
+
 export interface User {
   id: string;
   name: string;
@@ -114,6 +116,7 @@ export interface User {
   initials: string;
   color: string;
   title?: string;
+  role: AppRole;
 }
 
 export interface Task {

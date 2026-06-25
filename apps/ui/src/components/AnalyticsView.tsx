@@ -183,7 +183,7 @@ function OverviewTab({ tasks, companies }: { tasks: Task[]; companies: Portfolio
     () =>
       tasks
         .filter((t) => isTaskOverdue(t))
-        .sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime()),
+        .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0)),
     [tasks]
   );
 

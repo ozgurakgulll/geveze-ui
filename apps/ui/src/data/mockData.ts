@@ -1,54 +1,12 @@
 import type { Task, User, Column, Project, TimelineItem } from '@/types';
 
 export const users: User[] = [
-  {
-    id: '1',
-    name: 'Nihat Birgül',
-    email: 'nihat@geveze.com',
-    initials: 'NB',
-    color: '#FF6B6B',
-    title: 'Grafik Tasarımcı',
-  },
-  {
-    id: '2',
-    name: 'Selena Serfiçeli',
-    email: 'selena@geveze.com',
-    initials: 'SS',
-    color: '#4ECDC4',
-    title: 'Grafik Tasarımcı',
-  },
-  {
-    id: '3',
-    name: 'Efecan Dural',
-    email: 'efecan@geveze.com',
-    initials: 'ED',
-    color: '#45B7D1',
-    title: 'Yönetici',
-  },
-  {
-    id: '4',
-    name: 'Metin Onur',
-    email: 'metin@geveze.com',
-    initials: 'MO',
-    color: '#96CEB4',
-    title: 'Videographer',
-  },
-  {
-    id: '5',
-    name: 'Tuğçe Altıparmak',
-    email: 'tugce@geveze.com',
-    initials: 'TA',
-    color: '#F59E0B',
-    title: 'Sosyal Medya Yöneticisi',
-  },
-  {
-    id: '6',
-    name: 'Kazım Gün',
-    email: 'kazim@geveze.com',
-    initials: 'KG',
-    color: '#A78BFA',
-    title: 'Video Editör',
-  },
+  { id: '1', name: 'Nihat Birgül',      email: 'nihat@geveze.com',  initials: 'NB', color: '#FF6B6B', title: 'Grafik Tasarımcı',        role: 'member' },
+  { id: '2', name: 'Selena Serfiçeli',  email: 'selena@geveze.com', initials: 'SS', color: '#4ECDC4', title: 'Grafik Tasarımcı',        role: 'member' },
+  { id: '3', name: 'Efecan Dural',      email: 'efecan@geveze.com', initials: 'ED', color: '#45B7D1', title: 'Yönetici',                role: 'admin' },
+  { id: '4', name: 'Metin Onur',        email: 'metin@geveze.com',  initials: 'MO', color: '#96CEB4', title: 'Videographer',            role: 'member' },
+  { id: '5', name: 'Tuğçe Altıparmak', email: 'tugce@geveze.com',  initials: 'TA', color: '#F59E0B', title: 'Sosyal Medya Yöneticisi', role: 'manager' },
+  { id: '6', name: 'Kazım Gün',         email: 'kazim@geveze.com',  initials: 'KG', color: '#A78BFA', title: 'Video Editör',            role: 'admin' },
 ];
 
 const baseTasks: Task[] = [

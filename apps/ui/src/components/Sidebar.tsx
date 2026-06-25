@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { currentProject } from '@/data/mockData';
 import { useUsers } from '@/contexts/UsersContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type { ViewType } from '@/types';
 import logo from '@/assets/geveze-logo.png';
 
@@ -62,6 +63,8 @@ export function Sidebar({
   embedded = false,
 }: SidebarProps) {
   const users = useUsers();
+  const { user: authUser } = useAuth();
+  const isManager = authUser?.role === 'admin' || authUser?.role === 'manager';
   const effectiveCollapsed = embedded ? false : isCollapsed;
   const [isEkipExpanded, setIsEkipExpanded] = useState(true);
 
@@ -74,7 +77,7 @@ export function Sidebar({
 
   const projectItems: { view: ViewType; label: string; icon: typeof FolderOpen }[] = [
     { view: 'dashboard', label: 'Genel Bakış', icon: FolderOpen },
-    { view: 'analytics', label: 'Analitik', icon: BarChart3 },
+    ...(isManager ? [{ view: 'analytics' as ViewType, label: 'Analitik', icon: BarChart3 }] : []),
     { view: 'portfolio', label: 'Portföy', icon: BriefcaseBusiness },
   ];
 

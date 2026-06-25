@@ -4,7 +4,7 @@ import type { User } from '@/types';
 const TOKEN_KEY = 'geveze.auth.token';
 const USER_KEY = 'geveze.auth.user';
 
-interface AuthUser extends Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials'> {}
+interface AuthUser extends Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials' | 'role'> {}
 
 interface AuthState {
   token: string | null;

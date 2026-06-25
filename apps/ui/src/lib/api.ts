@@ -32,7 +32,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export interface LoginResult {
   token: string;
-  user: Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials'>;
+  user: Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials' | 'role'>;
 }
 
 export const login = (email: string, password: string): Promise<LoginResult> =>

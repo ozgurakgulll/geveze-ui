@@ -23,6 +23,9 @@ export class UserModel {
   @Prop({ trim: true })
   title?: string;
 
+  @Prop({ required: true, default: 'member', enum: ['admin', 'manager', 'member'] })
+  role: string;
+
   /** select: false → API yanıtlarına dahil edilmez */
   @Prop({ select: false })
   passwordHash?: string;

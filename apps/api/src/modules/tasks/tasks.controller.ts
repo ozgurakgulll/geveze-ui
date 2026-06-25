@@ -8,9 +8,11 @@ import {
   Param,
   Body,
   Query,
+  Request,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import type { AppRole } from '@geveze/shared';
 import { TasksService, TaskFilters } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -57,13 +59,15 @@ export class TasksController {
 
   @Get()
   findAll(
+    @Request() req: { user: { id: string; role: AppRole } },
     @Query('archived') archived?: string,
     @Query('assigneeId') assigneeId?: string,
     @Query('status') status?: string,
   ): Promise<Task[]> {
+    const effectiveAssigneeId = req.user.role === 'member' ? req.user.id : assigneeId;
     const filters: TaskFilters = {
       ...(archived !== undefined ? { archived: archived === 'true' } : {}),
-      ...(assigneeId ? { assigneeId } : {}),
+      ...(effectiveAssigneeId ? { assigneeId: effectiveAssigneeId } : {}),
       ...(status ? { status } : {}),
     };
     return this.tasksService.findAll(filters);
@@ -90,6 +94,24 @@ export class TasksController {
     return this.tasksService.remove(id);
   }
 
+  @Patch('bulk/delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  bulkDelete(@Body() body: BulkIdsDto): Promise<void> {
+    return this.tasksService.bulkDelete(body.ids);
+  }
+
+  @Patch('bulk/reassign')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  bulkReassign(@Body() body: BulkReassignDto): Promise<void> {
+    return this.tasksService.bulkReassign(body.ids, body.assigneeId, body.assigneeName);
+  }
+
+  @Patch('bulk/archive')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  bulkArchive(@Body() body: BulkIdsDto): Promise<void> {
+    return this.tasksService.bulkArchive(body.ids);
+  }
+
   @Patch(':id/archive')
   setArchived(@Param('id') id: string, @Body() body: ArchiveDto): Promise<Task> {
     return this.tasksService.setArchived(id, body.archived);
@@ -110,23 +132,5 @@ export class TasksController {
     @Param('attachmentId') attachmentId: string,
   ): Promise<Task> {
     return this.tasksService.removeAttachment(taskId, attachmentId);
-  }
-
-  @Patch('bulk/delete')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  bulkDelete(@Body() body: BulkIdsDto): Promise<void> {
-    return this.tasksService.bulkDelete(body.ids);
-  }
-
-  @Patch('bulk/reassign')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  bulkReassign(@Body() body: BulkReassignDto): Promise<void> {
-    return this.tasksService.bulkReassign(body.ids, body.assigneeId, body.assigneeName);
-  }
-
-  @Patch('bulk/archive')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  bulkArchive(@Body() body: BulkIdsDto): Promise<void> {
-    return this.tasksService.bulkArchive(body.ids);
   }
 }

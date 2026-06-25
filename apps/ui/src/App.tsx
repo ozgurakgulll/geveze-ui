@@ -397,14 +397,14 @@ function LoadingScreen() {
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function App() {
-  const { token, clearAuth } = useAuth();
+  const { token, clearAuth, user: authUser } = useAuth();
 
   if (!token) return <><Toaster position="top-right" richColors /><LoginPage /></>;
 
-  return <AuthenticatedApp onLogout={clearAuth} />;
+  return <AuthenticatedApp onLogout={clearAuth} authUser={authUser} />;
 }
 
-function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
+function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUser: { id: string; role: string } | null }) {
   // ── UI state (localStorage) ──
   const [currentView, setCurrentView] = useState<ViewType>(loadInitialView);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -437,8 +437,10 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   const tagList = useMemo(() => tagEntries.map((e) => e.name), [tagEntries]);
   const serviceTypes = useMemo(() => serviceTypeEntries.map((e) => e.name), [serviceTypeEntries]);
 
-  const currentUserRole: PortfolioRole = 'manager';
-  const canManagePortfolio = ['admin', 'manager'].includes(currentUserRole);
+  const appRole = authUser?.role ?? 'member';
+  const isManager = appRole === 'admin' || appRole === 'manager';
+  const currentUserRole: PortfolioRole = isManager ? 'manager' : 'editor';
+  const canManagePortfolio = isManager;
 
   // ── Initial data fetch ──
   useEffect(() => {
@@ -455,8 +457,9 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
         setPortfolioCompaniesState(
           fetchedPortfolio.map((c) => normalizePortfolioCompany(c) ?? c)
         );
-        // Fetch tasks after users so we can resolve assignees
-        const fetchedTasks = await api.getTasks(fetchedUsers);
+        // member sadece kendine atanan görevleri görür (backend de filtreler, bu ek güvence)
+        const taskParams = appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined;
+        const fetchedTasks = await api.getTasks(fetchedUsers, taskParams);
         setTasks(fetchedTasks);
       })
       .catch(() => {
@@ -975,7 +978,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
       toast.success(ids.length === 1 ? 'Görev silindi' : `${ids.length} görev silindi`);
       api.bulkDeleteTasks(ids).catch(() => {
         toast.error('Silme işlemi kısmen başarısız oldu');
-        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
+        api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
       });
     },
     [users]
@@ -994,7 +997,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
       toast.success(ids.length === 1 ? 'Görev devredildi' : `${ids.length} görev devredildi`);
       api.bulkReassignTasks(ids, assigneeId, assignee?.name).catch(() => {
         toast.error('Devret işlemi kısmen başarısız oldu');
-        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
+        api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
       });
     },
     [users]
@@ -1011,7 +1014,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
       toast.success(ids.length === 1 ? 'Görev arşivlendi' : `${ids.length} görev arşivlendi`);
       api.bulkArchiveTasks(ids).catch(() => {
         toast.error('Arşivleme kısmen başarısız oldu');
-        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
+        api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
       });
     },
     [users]

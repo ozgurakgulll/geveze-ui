@@ -16,12 +16,12 @@ import { SettingSchema, SettingModel } from '../modules/settings/schemas/setting
 
 // ───────── Seed data ─────────
 const seedUsers = [
-  { name: 'Nihat Birgül',       email: 'nihat@geveze.com',  initials: 'NB', color: '#FF6B6B', title: 'Grafik Tasarımcı',       passwordHash: 'seed-hash' },
-  { name: 'Selena Serfiçeli',   email: 'selena@geveze.com', initials: 'SS', color: '#4ECDC4', title: 'Grafik Tasarımcı',       passwordHash: 'seed-hash' },
-  { name: 'Efecan Dural',       email: 'efecan@geveze.com', initials: 'ED', color: '#45B7D1', title: 'Yönetici',               passwordHash: 'seed-hash' },
-  { name: 'Metin Onur',         email: 'metin@geveze.com',  initials: 'MO', color: '#96CEB4', title: 'Videographer',           passwordHash: 'seed-hash' },
-  { name: 'Tuğçe Altıparmak',   email: 'tugce@geveze.com',  initials: 'TA', color: '#F59E0B', title: 'Sosyal Medya Yöneticisi',passwordHash: 'seed-hash' },
-  { name: 'Kazım Gün',          email: 'kazim@geveze.com',  initials: 'KG', color: '#A78BFA', title: 'Video Editör',           passwordHash: 'seed-hash' },
+  { name: 'Nihat Birgül',       email: 'nihat@geveze.com',  initials: 'NB', color: '#FF6B6B', title: 'Grafik Tasarımcı',        role: 'member',  passwordHash: 'seed-hash' },
+  { name: 'Selena Serfiçeli',   email: 'selena@geveze.com', initials: 'SS', color: '#4ECDC4', title: 'Grafik Tasarımcı',        role: 'member',  passwordHash: 'seed-hash' },
+  { name: 'Efecan Dural',       email: 'efecan@geveze.com', initials: 'ED', color: '#45B7D1', title: 'Yönetici',                role: 'admin',   passwordHash: 'seed-hash' },
+  { name: 'Metin Onur',         email: 'metin@geveze.com',  initials: 'MO', color: '#96CEB4', title: 'Videographer',            role: 'member',  passwordHash: 'seed-hash' },
+  { name: 'Tuğçe Altıparmak',   email: 'tugce@geveze.com',  initials: 'TA', color: '#F59E0B', title: 'Sosyal Medya Yöneticisi', role: 'manager', passwordHash: 'seed-hash' },
+  { name: 'Kazım Gün',          email: 'kazim@geveze.com',  initials: 'KG', color: '#A78BFA', title: 'Video Editör',            role: 'admin',   passwordHash: 'seed-hash' },
 ];
 
 const seedTags = [

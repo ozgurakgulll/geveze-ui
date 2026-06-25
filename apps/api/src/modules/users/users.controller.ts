@@ -10,7 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import type { User } from '@geveze/shared';
 
 @Controller('users')
@@ -35,7 +35,7 @@ export class UsersController {
   @Put(':id')
   update(
     @Param('id') id: string,
-    @Body() dto: Partial<CreateUserDto>,
+    @Body() dto: UpdateUserDto,
   ): Promise<User> {
     return this.usersService.update(id, dto);
   }

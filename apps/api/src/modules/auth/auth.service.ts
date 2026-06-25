@@ -20,8 +20,8 @@ export class AuthService {
     return { ...rest, id: String(rest['_id'] ?? rest['id']) } as unknown as User;
   }
 
-  login(user: User): { token: string; user: Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials'> } {
-    const payload = { sub: user.id, email: user.email };
+  login(user: User): { token: string; user: Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials' | 'role'> } {
+    const payload = { sub: user.id, email: user.email, role: user.role };
     return {
       token: this.jwtService.sign(payload),
       user: {
@@ -30,6 +30,7 @@ export class AuthService {
         email: user.email,
         color: user.color,
         initials: user.initials,
+        role: user.role,
       },
     };
   }
