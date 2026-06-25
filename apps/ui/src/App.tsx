@@ -7,6 +7,8 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { TaskDetailDialog } from '@/components/TaskDetailDialog';
 import { AppViewRouter } from '@/components/app/AppViewRouter';
+import { LoginPage } from '@/components/LoginPage';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   ActivityLogItem,
   CustomColumnType,
@@ -395,6 +397,14 @@ function LoadingScreen() {
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function App() {
+  const { token, clearAuth } = useAuth();
+
+  if (!token) return <><Toaster position="top-right" richColors /><LoginPage /></>;
+
+  return <AuthenticatedApp onLogout={clearAuth} />;
+}
+
+function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   // ── UI state (localStorage) ──
   const [currentView, setCurrentView] = useState<ViewType>(loadInitialView);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -564,6 +574,10 @@ function App() {
     window.localStorage.removeItem(TAG_SERVICE_MAP_KEY);
     window.location.reload();
   }, []);
+
+  const handleLogout = useCallback(() => {
+    onLogout();
+  }, [onLogout]);
 
   const handleViewChange = useCallback((view: ViewType) => {
     if (view === 'portfolio') {
@@ -1131,6 +1145,7 @@ function App() {
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSelectPerson={handleSelectPerson}
         onClearAllData={handleClearAllData}
+        onLogout={handleLogout}
       />
 
       {/* Mobile Sidebar Drawer */}
@@ -1150,6 +1165,7 @@ function App() {
                 setIsMobileSidebarOpen(false);
               }}
               onClearAllData={handleClearAllData}
+              onLogout={handleLogout}
               embedded
             />
           </div>

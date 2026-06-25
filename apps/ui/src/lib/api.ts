@@ -7,14 +7,19 @@ import type {
   ActivityLogItem,
   TaskAttachment,
 } from '@/types';
+import { getStoredToken } from '@/contexts/AuthContext';
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
-    ...options,
-  });
+  const token = getStoredToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (options?.headers) {
+    const extra = options.headers as Record<string, string>;
+    Object.assign(headers, extra);
+  }
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { message?: string };
     throw new Error(err.message ?? `HTTP ${res.status}`);
@@ -22,6 +27,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export interface LoginResult {
+  token: string;
+  user: Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials'>;
+}
+
+export const login = (email: string, password: string): Promise<LoginResult> =>
+  request<LoginResult>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
 
 // ─── Task parsing ────────────────────────────────────────────────────────────
 

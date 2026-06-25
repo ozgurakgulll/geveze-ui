@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import * as mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as bcrypt from 'bcrypt';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -139,16 +140,18 @@ async function seed() {
 
   // ── Users ──
   console.log('👤  Seeding users...');
+  const DEFAULT_PASSWORD = 'geveze123';
+  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
   const upsertedUsers: mongoose.Document[] = [];
   for (const u of seedUsers) {
     const doc = await UserModelDb.findOneAndUpdate(
       { email: u.email },
-      u,
+      { ...u, passwordHash },
       { upsert: true, new: true },
     );
     upsertedUsers.push(doc!);
   }
-  console.log(`   ✓ ${upsertedUsers.length} users`);
+  console.log(`   ✓ ${upsertedUsers.length} users (şifre: ${DEFAULT_PASSWORD})`);
 
   // ── Tasks ──
   console.log('📋  Seeding tasks...');

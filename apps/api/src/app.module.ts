@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TasksModule } from './modules/tasks/tasks.module';
@@ -7,6 +8,8 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { ServiceTypesModule } from './modules/service-types/service-types.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -14,12 +17,16 @@ import { SettingsModule } from './modules/settings/settings.module';
     MongooseModule.forRoot(
       process.env['MONGODB_URI'] ?? 'mongodb://localhost:27017/geveze',
     ),
+    AuthModule,
     TasksModule,
     UsersModule,
     PortfolioModule,
     TagsModule,
     ServiceTypesModule,
     SettingsModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

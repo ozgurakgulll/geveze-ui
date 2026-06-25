@@ -26,6 +26,7 @@ import {
   ChevronUp,
   Trash2,
   Archive,
+  LogOut,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   onSelectPerson: (personId: string) => void;
   onClearAllData?: () => void;
+  onLogout?: () => void;
   /** When true, renders full-width for use inside Sheet (mobile drawer) */
   embedded?: boolean;
 }
@@ -56,6 +58,7 @@ export function Sidebar({
   onToggleCollapse,
   onSelectPerson,
   onClearAllData,
+  onLogout,
   embedded = false,
 }: SidebarProps) {
   const users = useUsers();
@@ -346,6 +349,12 @@ export function Sidebar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top">
+              {onLogout && (
+                <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Çıkış Yap
+                </DropdownMenuItem>
+              )}
               {onClearAllData && (
                 <DropdownMenuItem
                   variant="destructive"
