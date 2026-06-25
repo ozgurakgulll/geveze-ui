@@ -96,7 +96,8 @@ TaskSchema.index({ portfolioCompanyId: 1 });
 
 TaskSchema.set('toJSON', {
   virtuals: true,
-  transform: (_doc, ret: Record<string, unknown>) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  transform: (_doc: any, ret: any) => {
     ret['id'] = ret['_id'];
     delete ret['_id'];
     delete ret['__v'];
