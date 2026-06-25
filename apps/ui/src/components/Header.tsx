@@ -25,7 +25,8 @@ import {
   Menu,
   AlertCircle,
 } from 'lucide-react';
-import { currentProject, users, statusLabels } from '@/data/mockData';
+import { currentProject, statusLabels } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { TaskStatus } from '@/types';
 import type { ViewType } from '@/types';
 
@@ -66,6 +67,7 @@ export function Header({
   overdueOnly = false,
   onOverdueOnlyChange,
 }: HeaderProps) {
+  const users = useUsers();
   const viewLabels: Record<ViewType, string> = {
     dashboard: 'Gösterge Paneli',
     table: 'Ana Tablo',

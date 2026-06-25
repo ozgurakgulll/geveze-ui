@@ -14,7 +14,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import { users, priorityColors, priorityLabels } from '@/data/mockData';
+import { priorityColors, priorityLabels } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { Task } from '@/types';
 import { format, differenceInCalendarDays, startOfDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -27,6 +28,7 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ tasks, onTaskClick }: DashboardViewProps) {
+  const users = useUsers();
   const stats = useMemo(() => {
     const total = tasks.length;
     const done = tasks.filter((t) => t.status === 'done').length;

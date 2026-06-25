@@ -29,7 +29,8 @@ import { CalendarIcon, X, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { users, priorityColors, priorityLabels } from '@/data/mockData';
+import { priorityColors, priorityLabels } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { TaskStatus, Priority } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -77,6 +78,7 @@ export function AddTaskDialog({
   tagServiceMap: _tagServiceMap,
   onSetTagService: _onSetTagService,
 }: AddTaskDialogProps) {
+  const users = useUsers();
   const baseTags = availableTagsProp ?? FALLBACK_TAGS;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

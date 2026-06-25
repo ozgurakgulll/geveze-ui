@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskCommentsPanel } from '@/components/TaskCommentsPanel';
-import { priorityColors, priorityLabels, statusLabels, users } from '@/data/mockData';
+import { priorityColors, priorityLabels, statusLabels } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { CustomColumnType, Priority, TableColumnSchemaItem, Task, TaskStatus, TaskAttachment } from '@/types';
 import { DocumentUploadDialog } from '@/components/DocumentUploadDialog';
 import {
@@ -156,6 +157,7 @@ function TaskDetailDialogContent({
   onSetTagService: _onSetTagService,
   presentation = 'dialog',
 }: TaskDetailDialogContentProps) {
+  const users = useUsers();
   const initialDraft = createDraft(task);
   const baseTags = availableTagsProp.length > 0 ? availableTagsProp : FALLBACK_TAGS;
   const [activeTab, setActiveTab] = useState<TaskDetailTab>('updates');

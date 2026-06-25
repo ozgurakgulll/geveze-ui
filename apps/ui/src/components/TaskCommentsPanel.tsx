@@ -9,7 +9,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Image as ImageIcon, Mic, Smile, Send } from 'lucide-react';
-import { users } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { Task } from '@/types';
 import { format } from 'date-fns';
 
@@ -20,9 +20,9 @@ interface TaskCommentsPanelProps {
 
 type Attachment = { id: string; name: string; type: 'file' | 'image' | 'audio'; url?: string };
 
-const buildInitialComments = (task: Task) => {
-  const primary = task.assignee ?? users[0];
-  const teammate = users.find((u) => u.id !== primary?.id) ?? users[1] ?? primary;
+const buildInitialComments = (task: Task, userList: import('@/types').User[]) => {
+  const primary = task.assignee ?? userList[0];
+  const teammate = userList.find((u) => u.id !== primary?.id) ?? userList[1] ?? primary;
   if (!primary || !teammate) return [];
   return [
     {
@@ -47,10 +47,11 @@ const revokeAttachmentPreview = (attachment: Attachment) => {
 };
 
 export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProps) {
+  const users = useUsers();
   const [newComment, setNewComment] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [comments, setComments] = useState(() => buildInitialComments(task));
+  const [comments, setComments] = useState(() => buildInitialComments(task, users));
   const attachmentsRef = useRef<Attachment[]>([]);
 
   useEffect(() => {

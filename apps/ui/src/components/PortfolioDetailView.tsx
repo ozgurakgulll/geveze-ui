@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { users } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import { DocumentUploadDialog } from '@/components/DocumentUploadDialog';
 import { BrandGalleryDialog } from '@/components/BrandGalleryDialog';
 import { CompanyAnalyticsView } from '@/components/CompanyAnalyticsView';
@@ -238,6 +238,7 @@ export function PortfolioDetailView({
   onTaskClick,
   portfolioSearchQuery = '',
 }: PortfolioDetailViewProps) {
+  const users = useUsers();
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);

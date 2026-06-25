@@ -33,7 +33,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { currentProject, users } from '@/data/mockData';
+import { currentProject } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { ViewType } from '@/types';
 import logo from '@/assets/geveze-logo.png';
 
@@ -57,6 +58,7 @@ export function Sidebar({
   onClearAllData,
   embedded = false,
 }: SidebarProps) {
+  const users = useUsers();
   const effectiveCollapsed = embedded ? false : isCollapsed;
   const [isEkipExpanded, setIsEkipExpanded] = useState(true);
 

@@ -40,7 +40,8 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import { users, priorityColors, priorityLabels, statusLabels } from '@/data/mockData';
+import { priorityColors, priorityLabels, statusLabels } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type { Task, PortfolioCompany } from '@/types';
 import { getTaskProgress } from '@/lib/taskProgress';
 import { getOverdueCalendarDaysFromDue, isTaskOverdue } from '@/lib/taskOverdue';
@@ -299,6 +300,7 @@ function OverviewTab({ tasks, companies }: { tasks: Task[]; companies: Portfolio
 }
 
 function TeamTab({ tasks, companies, onPersonSelect }: { tasks: Task[]; companies: PortfolioCompany[]; onPersonSelect?: (personId: string) => void }) {
+  const users = useUsers();
   const teamData = useMemo(() =>
     users.map((user) => {
       const ut = tasks.filter((t) => t.assignee?.id === user.id);
@@ -427,6 +429,7 @@ function TeamTab({ tasks, companies, onPersonSelect }: { tasks: Task[]; companie
 }
 
 function CompanyTab({ tasks, companies, serviceTypes, onCompanySelect }: { tasks: Task[]; companies: PortfolioCompany[]; serviceTypes: string[]; onCompanySelect?: (companyId: string) => void }) {
+  const users = useUsers();
   const [sortField, setSortField] = useState<'name' | 'services' | 'quota'>('quota');
 
   const allServicesForChart = useMemo(() => {

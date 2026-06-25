@@ -1,5 +1,5 @@
 import { lazy, Suspense, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { users } from '@/data/mockData';
+import { useUsers } from '@/contexts/UsersContext';
 import type {
   PortfolioCompany,
   PortfolioCompanyDraft,
@@ -149,6 +149,8 @@ export function AppViewRouter(props: AppViewRouterProps) {
     tagServiceMap,
     handleAddAttachment,
   } = props;
+
+  const users = useUsers();
 
   let content: ReactNode;
   switch (currentView) {

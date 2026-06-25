@@ -21,114 +21,27 @@ import type {
   Task,
   TaskAttachment,
   TaskStatus,
+  User,
   ViewType,
 } from '@/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { initialTasks, priorityLabels, statusLabels, users } from '@/data/mockData';
-import { portfolioCompanies as portfolioSeedCompanies } from '@/data/portfolioData';
+import { priorityLabels, statusLabels } from '@/data/mockData';
 import { getTaskProgress } from '@/lib/taskProgress';
 import { isTaskOverdue } from '@/lib/taskOverdue';
+import * as api from '@/lib/api';
+import { UsersProvider } from '@/contexts/UsersContext';
 import {
   OLD_CUSTOM_COLUMNS_KEY,
-  OLD_CUSTOM_VALUES_KEY,
-  PORTFOLIO_STORAGE_KEY,
-  SERVICE_TYPES_STORAGE_KEY,
   TABLE_SCHEMA_STORAGE_KEY,
   TAG_SERVICE_MAP_KEY,
-  TAGS_STORAGE_KEY,
-  TASKS_STORAGE_KEY,
   VIEW_STORAGE_KEY,
 } from '@/lib/gevezeStorageKeys';
-import { clearGevezePersistedKeys } from '@/hooks/useGevezeStorage';
-
-const DEFAULT_SERVICE_TYPES: string[] = [
-  'Video Prodüksiyon',
-  'Sosyal Medya Yönetimi',
-  'Performance Marketing',
-  'Grafik Tasarım',
-  'İçerik Yazarlığı',
-  'Web Geliştirme',
-  'SEO',
-  'Influencer Marketing',
-  'Kurumsal Kimlik',
-  'İç Projeler',
-];
-
-const loadServiceTypes = (): string[] => {
-  if (typeof window === 'undefined') return DEFAULT_SERVICE_TYPES;
-  try {
-    const raw = window.localStorage.getItem(SERVICE_TYPES_STORAGE_KEY);
-    if (!raw) return DEFAULT_SERVICE_TYPES;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_SERVICE_TYPES;
-    const valid = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
-    return valid.length > 0 ? valid : DEFAULT_SERVICE_TYPES;
-  } catch {
-    return DEFAULT_SERVICE_TYPES;
-  }
-};
-
-const DEFAULT_TAGS = [
-  'Web Site',
-  'Sosyal Medya',
-  'Tasarım',
-  'Post',
-  'Story',
-  'Reels',
-  'Katalog',
-  'Tanıtım Filmi',
-  '3D',
-  'Motion Graphic',
-];
-
-const loadTags = (): string[] => {
-  if (typeof window === 'undefined') return DEFAULT_TAGS;
-  try {
-    const raw = window.localStorage.getItem(TAGS_STORAGE_KEY);
-    if (!raw) return DEFAULT_TAGS;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_TAGS;
-    const valid = parsed.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
-    return valid.length > 0 ? valid : DEFAULT_TAGS;
-  } catch {
-    return DEFAULT_TAGS;
-  }
-};
-
-const DEFAULT_TAG_SERVICE_MAP: Record<string, string> = {
-  Post: 'Sosyal Medya Yönetimi',
-  Story: 'Sosyal Medya Yönetimi',
-  Reels: 'Sosyal Medya Yönetimi',
-  'Tanıtım Filmi': 'Video Prodüksiyon',
-  '3D': 'Video Prodüksiyon',
-  'Motion Graphic': 'Video Prodüksiyon',
-  'Web Site': 'Web Geliştirme',
-};
-
-const loadTagServiceMap = (): Record<string, string> => {
-  if (typeof window === 'undefined') return { ...DEFAULT_TAG_SERVICE_MAP };
-  try {
-    const raw = window.localStorage.getItem(TAG_SERVICE_MAP_KEY);
-    if (!raw) return { ...DEFAULT_TAG_SERVICE_MAP };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_TAG_SERVICE_MAP };
-    const result: Record<string, string> = {};
-    for (const [k, v] of Object.entries(parsed)) {
-      if (typeof k === 'string' && typeof v === 'string' && k.trim() && v.trim()) {
-        result[k] = v;
-      }
-    }
-    return result;
-  } catch {
-    return { ...DEFAULT_TAG_SERVICE_MAP };
-  }
-};
 
 /** Seçim + ⋮ menü sığsın; dar sütun grid taşmasıyla başlığın üstüne biner */
 const MIN_TABLE_SELECT_COL_PX = 72;
 
-/** Eski kayıtlardan / localStorage'dan gelen "Yorum" sütununu kaldırır */
+/** Eski kayıtlardan gelen "Yorum" sütununu kaldırır */
 function withoutCommentsColumn(schema: TableColumnSchemaItem[]): TableColumnSchemaItem[] {
   return schema.filter((c) => c.id !== 'comments');
 }
@@ -146,7 +59,6 @@ function withMinimumSelectColumnWidth(schema: TableColumnSchemaItem[]): TableCol
     if (!Number.isFinite(n) || n < MIN_TABLE_SELECT_COL_PX) {
       return { ...col, width: `${MIN_TABLE_SELECT_COL_PX}px` };
     }
-    /* Eski 72–108px varsayılanları tek sıkı genişliğe çek (checkbox–başlık boşluğu) */
     if (n <= 108) {
       return { ...col, width: `${MIN_TABLE_SELECT_COL_PX}px` };
     }
@@ -228,31 +140,6 @@ const isPortfolioStatus = (value: unknown): value is PortfolioStatus =>
 const isServiceType = (value: unknown): value is ServiceType =>
   typeof value === 'string' && value.trim().length > 0;
 
-const slugify = (value: string): string =>
-  value
-    .toLowerCase()
-    .replace(/ı/g, 'i')
-    .replace(/İ/g, 'i')
-    .replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u')
-    .replace(/ş/g, 's')
-    .replace(/ö/g, 'o')
-    .replace(/ç/g, 'c')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'company';
-
-const createActivityLog = (
-  companyId: string,
-  action: string,
-  note: string,
-  author = 'System'
-): ActivityLogItem => ({
-  id: `${companyId}-${action.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
-  date: new Date().toISOString(),
-  author,
-  action,
-  note,
-});
 
 const createTaskActivityLog = (
   taskId: string,
@@ -269,26 +156,22 @@ const createTaskActivityLog = (
 
 const normalizeMonthlyQuotas = (raw: unknown): MonthlyContentQuota => {
   const data = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-
   const video = typeof data.video === 'number' && data.video >= 0 ? data.video : 0;
   const post = typeof data.post === 'number' && data.post >= 0 ? data.post : 0;
   const story = typeof data.story === 'number' && data.story >= 0 ? data.story : 0;
   const render3d = typeof data.render3d === 'number' && data.render3d >= 0 ? data.render3d : 0;
-
   return { video, post, story, render3d };
 };
 
 const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
   if (!raw || typeof raw !== 'object') return null;
   const data = raw as Record<string, unknown>;
-
   if (typeof data.id !== 'string' || typeof data.name !== 'string') return null;
   if (!isPortfolioStatus(data.status) || typeof data.startDate !== 'string') return null;
 
   const servicesTaken = Array.isArray(data.servicesTaken)
     ? data.servicesTaken.filter(isServiceType)
     : [];
-
   const monthlyQuotas = normalizeMonthlyQuotas(data.monthlyQuotas);
 
   const socialMediaAccounts = Array.isArray(data.socialMediaAccounts)
@@ -303,20 +186,13 @@ const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
           ) {
             return null;
           }
-
           const visibleTo = Array.isArray(account.visibleTo)
             ? account.visibleTo.filter(
                 (role): role is PortfolioRole =>
                   role === 'admin' || role === 'manager' || role === 'editor' || role === 'viewer'
               )
             : portfolioPrivateRoles;
-
-          return {
-            platform: account.platform,
-            handle: account.handle,
-            url: account.url,
-            visibleTo,
-          };
+          return { platform: account.platform, handle: account.handle, url: account.url, visibleTo };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null)
     : [];
@@ -378,13 +254,7 @@ const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
           ) {
             return null;
           }
-
-          return {
-            name: contact.name,
-            role: contact.role,
-            email: contact.email,
-            phone: contact.phone,
-          };
+          return { name: contact.name, role: contact.role, email: contact.email, phone: contact.phone };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null)
     : [];
@@ -408,7 +278,6 @@ const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
           ) {
             return null;
           }
-
           return {
             id: calendar.id,
             date: calendar.date,
@@ -438,14 +307,7 @@ const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
           ) {
             return null;
           }
-
-          return {
-            id: log.id,
-            date: log.date,
-            author: log.author,
-            action: log.action,
-            note: log.note,
-          };
+          return { id: log.id, date: log.date, author: log.author, action: log.action, note: log.note };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null)
     : [];
@@ -468,154 +330,6 @@ const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
   };
 };
 
-const loadInitialPortfolioCompanies = (): PortfolioCompany[] => {
-  if (typeof window === 'undefined') return portfolioSeedCompanies;
-
-  try {
-    const raw = window.localStorage.getItem(PORTFOLIO_STORAGE_KEY);
-    if (!raw) return portfolioSeedCompanies;
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return portfolioSeedCompanies;
-
-    const companies = parsed
-      .map(normalizePortfolioCompany)
-      .filter((company): company is PortfolioCompany => company !== null);
-
-    if (parsed.length > 0 && companies.length === 0) {
-      return portfolioSeedCompanies;
-    }
-
-    return companies;
-  } catch {
-    return portfolioSeedCompanies;
-  }
-};
-
-const parseTask = (raw: unknown): Task | null => {
-  if (!raw || typeof raw !== 'object') return null;
-  const data = raw as Record<string, unknown>;
-  if (typeof data.id !== 'string' || typeof data.title !== 'string') return null;
-  if (
-    data.status !== 'brief' &&
-    data.status !== 'in-progress' &&
-    data.status !== 'review' &&
-    data.status !== 'revision' &&
-    data.status !== 'done'
-  ) {
-    return null;
-  }
-  if (
-    data.priority !== 'low' &&
-    data.priority !== 'medium' &&
-    data.priority !== 'high' &&
-    data.priority !== 'urgent'
-  ) {
-    return null;
-  }
-
-  const assigneeId =
-    data.assignee && typeof data.assignee === 'object'
-      ? (data.assignee as { id?: unknown }).id
-      : undefined;
-  const assignee =
-    typeof assigneeId === 'string' ? users.find((user) => user.id === assigneeId) : undefined;
-
-  const customFields: Record<string, string> = {};
-  if (data.customFields && typeof data.customFields === 'object') {
-    const cf = data.customFields as Record<string, unknown>;
-    for (const k of Object.keys(cf)) {
-      if (typeof cf[k] === 'string') customFields[k] = cf[k] as string;
-    }
-  }
-
-  const activityLog: ActivityLogItem[] = Array.isArray(data.activityLog)
-    ? data.activityLog
-        .map((item: unknown) => {
-          if (!item || typeof item !== 'object') return null;
-          const log = item as Record<string, unknown>;
-          if (
-            typeof log.id !== 'string' ||
-            typeof log.date !== 'string' ||
-            typeof log.author !== 'string' ||
-            typeof log.action !== 'string' ||
-            typeof log.note !== 'string'
-          ) {
-            return null;
-          }
-          return {
-            id: log.id,
-            date: log.date,
-            author: log.author,
-            action: log.action,
-            note: log.note,
-          };
-        })
-        .filter((item): item is ActivityLogItem => item !== null)
-    : [];
-
-  const attachments: TaskAttachment[] = Array.isArray(data.attachments)
-    ? data.attachments
-        .map((item: unknown) => {
-          if (!item || typeof item !== 'object') return null;
-          const att = item as Record<string, unknown>;
-          if (
-            typeof att.id !== 'string' ||
-            typeof att.name !== 'string' ||
-            typeof att.type !== 'string' ||
-            typeof att.data !== 'string'
-          ) {
-            return null;
-          }
-          return {
-            id: att.id,
-            name: att.name,
-            type: att.type,
-            size: typeof att.size === 'number' ? att.size : 0,
-            data: att.data,
-            uploadedAt: typeof att.uploadedAt === 'string' ? att.uploadedAt : new Date().toISOString(),
-          };
-        })
-        .filter((item): item is TaskAttachment => item !== null)
-    : [];
-
-  return {
-    id: data.id,
-    title: data.title,
-    description: typeof data.description === 'string' ? data.description : '',
-    status: data.status,
-    priority: data.priority,
-    assignee,
-    portfolioCompanyId:
-      typeof data.portfolioCompanyId === 'string' ? data.portfolioCompanyId : undefined,
-    portfolioCompanyName:
-      typeof data.portfolioCompanyName === 'string' ? data.portfolioCompanyName : undefined,
-    dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : undefined,
-    tags: Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string') : [],
-    progress: typeof data.progress === 'number' ? data.progress : 0,
-    createdAt: typeof data.createdAt === 'string' ? new Date(data.createdAt) : new Date(),
-    updatedAt: typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : new Date(),
-    customFields: Object.keys(customFields).length > 0 ? customFields : undefined,
-    activityLog: activityLog.length > 0 ? activityLog : undefined,
-    attachments: attachments.length > 0 ? attachments : undefined,
-    archived: data.archived === true ? true : undefined,
-  };
-};
-
-const loadInitialTasks = (): Task[] => {
-  if (typeof window === 'undefined') return initialTasks;
-  try {
-    const raw = window.localStorage.getItem(TASKS_STORAGE_KEY);
-    if (!raw) return initialTasks;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return initialTasks;
-    const tasks = parsed.map(parseTask).filter((task): task is Task => task !== null);
-    return tasks.length > 0 ? tasks : initialTasks;
-  } catch {
-    return initialTasks;
-  }
-};
-
 const isViewType = (value: unknown): value is ViewType => {
   return (
     value === 'table' ||
@@ -636,7 +350,52 @@ const loadInitialView = (): ViewType => {
   return isViewType(saved) ? saved : 'dashboard';
 };
 
+const DEFAULT_TAG_SERVICE_MAP: Record<string, string> = {
+  Post: 'Sosyal Medya Yönetimi',
+  Story: 'Sosyal Medya Yönetimi',
+  Reels: 'Sosyal Medya Yönetimi',
+  'Tanıtım Filmi': 'Video Prodüksiyon',
+  '3D': 'Video Prodüksiyon',
+  'Motion Graphic': 'Video Prodüksiyon',
+  'Web Site': 'Web Geliştirme',
+};
+
+const loadTagServiceMap = (): Record<string, string> => {
+  if (typeof window === 'undefined') return { ...DEFAULT_TAG_SERVICE_MAP };
+  try {
+    const raw = window.localStorage.getItem(TAG_SERVICE_MAP_KEY);
+    if (!raw) return { ...DEFAULT_TAG_SERVICE_MAP };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_TAG_SERVICE_MAP };
+    const result: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      if (typeof k === 'string' && typeof v === 'string' && k.trim() && v.trim()) {
+        result[k] = v;
+      }
+    }
+    return result;
+  } catch {
+    return { ...DEFAULT_TAG_SERVICE_MAP };
+  }
+};
+
+// ─── Loading screen ──────────────────────────────────────────────────────────
+
+function LoadingScreen() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-white">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+        <p className="text-sm text-gray-500">Veriler yükleniyor…</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+
 function App() {
+  // ── UI state (localStorage) ──
   const [currentView, setCurrentView] = useState<ViewType>(loadInitialView);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -645,26 +404,73 @@ function App() {
   const [addTaskDefaultDueDate, setAddTaskDefaultDueDate] = useState<Date | undefined>();
   const [addTaskDefaultAssigneeId, setAddTaskDefaultAssigneeId] = useState<string>('');
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<Task[]>(loadInitialTasks);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedPortfolioCompanyId, setSelectedPortfolioCompanyId] = useState<string | null>(null);
-  const [portfolioCompaniesState, setPortfolioCompaniesState] =
-    useState<PortfolioCompany[]>(loadInitialPortfolioCompanies);
-  const [tableColumnSchema, setTableColumnSchema] = useState<TableColumnSchemaItem[]>(
-    loadTableColumnSchema
-  );
+  const [tableColumnSchema, setTableColumnSchema] = useState<TableColumnSchemaItem[]>(loadTableColumnSchema);
   const [searchQuery, setSearchQuery] = useState('');
   const [globalAssigneeFilter, setGlobalAssigneeFilter] = useState<string>('');
   const [globalStatusFilter, setGlobalStatusFilter] = useState<string>('');
   const [globalOverdueOnly, setGlobalOverdueOnly] = useState(false);
   const [globalSortBy, setGlobalSortBy] = useState<'dueDate' | 'priority' | 'title'>('dueDate');
   const [globalSortDir, setGlobalSortDir] = useState<'asc' | 'desc'>('asc');
-  const [serviceTypes, setServiceTypes] = useState<string[]>(loadServiceTypes);
-  const [tagList, setTagList] = useState<string[]>(loadTags);
   const [tagServiceMap, setTagServiceMap] = useState<Record<string, string>>(loadTagServiceMap);
+
+  // ── Server state (API) ──
+  const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [portfolioCompaniesState, setPortfolioCompaniesState] = useState<PortfolioCompany[]>([]);
+  const [tagEntries, setTagEntries] = useState<{ id: string; name: string }[]>([]);
+  const [serviceTypeEntries, setServiceTypeEntries] = useState<{ id: string; name: string }[]>([]);
+
+  // ── Derived lists ──
+  const tagList = useMemo(() => tagEntries.map((e) => e.name), [tagEntries]);
+  const serviceTypes = useMemo(() => serviceTypeEntries.map((e) => e.name), [serviceTypeEntries]);
+
   const currentUserRole: PortfolioRole = 'manager';
   const canManagePortfolio = ['admin', 'manager'].includes(currentUserRole);
 
+  // ── Initial data fetch ──
+  useEffect(() => {
+    Promise.all([
+      api.getUsers(),
+      api.getTags(),
+      api.getServiceTypes(),
+      api.getPortfolio(),
+    ])
+      .then(async ([fetchedUsers, fetchedTags, fetchedSTs, fetchedPortfolio]) => {
+        setUsers(fetchedUsers);
+        setTagEntries(fetchedTags);
+        setServiceTypeEntries(fetchedSTs);
+        setPortfolioCompaniesState(
+          fetchedPortfolio.map((c) => normalizePortfolioCompany(c) ?? c)
+        );
+        // Fetch tasks after users so we can resolve assignees
+        const fetchedTasks = await api.getTasks(fetchedUsers);
+        setTasks(fetchedTasks);
+      })
+      .catch(() => {
+        toast.error('API bağlantı hatası — veriler yüklenemedi', {
+          description: 'API sunucusunun çalıştığından emin olun (npm run api)',
+        });
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  // ── UI prefs → localStorage ──
+  useEffect(() => {
+    window.localStorage.setItem(VIEW_STORAGE_KEY, currentView);
+  }, [currentView]);
+
+  useEffect(() => {
+    window.localStorage.setItem(TABLE_SCHEMA_STORAGE_KEY, JSON.stringify(tableColumnSchema));
+  }, [tableColumnSchema]);
+
+  useEffect(() => {
+    window.localStorage.setItem(TAG_SERVICE_MAP_KEY, JSON.stringify(tagServiceMap));
+  }, [tagServiceMap]);
+
+  // ── Derived / filtered tasks ──
   const portfolioTaskOptions = useMemo(
     () =>
       portfolioCompaniesState
@@ -674,12 +480,7 @@ function App() {
   );
 
   const filteredTasks = useMemo(() => {
-    const priorityRank: Record<Priority, number> = {
-      urgent: 0,
-      high: 1,
-      medium: 2,
-      low: 3,
-    };
+    const priorityRank: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
     let result = tasks.filter((task) => !task.archived);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -724,85 +525,27 @@ function App() {
     return [...result].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [tasks, searchQuery]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-  }, [tasks]);
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(VIEW_STORAGE_KEY, currentView);
-  }, [currentView]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(portfolioCompaniesState));
-  }, [portfolioCompaniesState]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TABLE_SCHEMA_STORAGE_KEY, JSON.stringify(tableColumnSchema));
-  }, [tableColumnSchema]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(SERVICE_TYPES_STORAGE_KEY, JSON.stringify(serviceTypes));
-  }, [serviceTypes]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tagList));
-  }, [tagList]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TAG_SERVICE_MAP_KEY, JSON.stringify(tagServiceMap));
-  }, [tagServiceMap]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const raw = window.localStorage.getItem(OLD_CUSTOM_VALUES_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        setTasks((prev) => {
-          const next = prev.map((task) => {
-            const vals = parsed[task.id];
-            if (!vals || typeof vals !== 'object') return task;
-            const cf: Record<string, string> = { ...task.customFields };
-            for (const k of Object.keys(vals)) {
-              if (typeof vals[k] === 'string') cf[k] = vals[k];
-            }
-            if (Object.keys(cf).length === 0) return task;
-            return { ...task, customFields: cf };
-          });
-          if (next.every((t, i) => t === prev[i])) return prev;
-          setTimeout(() => window.localStorage.removeItem(OLD_CUSTOM_VALUES_KEY), 0);
-          return next;
-        });
+  const handleTaskCustomFieldChange = useCallback(
+    (taskId: string, columnId: string, value: string) => {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId
+            ? { ...task, customFields: { ...task.customFields, [columnId]: value }, updatedAt: new Date() }
+            : task
+        )
+      );
+      // Fire-and-forget API sync for custom field changes
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        api
+          .updateTask(taskId, { customFields: { ...(task.customFields ?? {}), [columnId]: value } }, users)
+          .catch(() => { /* silent */ });
       }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const handleTaskCustomFieldChange = useCallback((taskId: string, columnId: string, value: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              customFields: {
-                ...task.customFields,
-                [columnId]: value,
-              },
-              updatedAt: new Date(),
-            }
-          : task
-      )
-    );
-  }, []);
+    },
+    [tasks, users]
+  );
 
   const handleRemoveColumnFromTasks = useCallback((columnId: string) => {
     setTasks((prev) =>
@@ -815,11 +558,10 @@ function App() {
   }, []);
 
   const handleClearAllData = useCallback(() => {
-    if (!window.confirm('Tüm veriler silinecek ve sayfa yenilenecek. Emin misiniz?')) return;
-    clearGevezePersistedKeys();
-    Object.keys(window.localStorage)
-      .filter((k) => k.startsWith('geveze.'))
-      .forEach((k) => window.localStorage.removeItem(k));
+    if (!window.confirm('Tüm yerel tercihler sıfırlanacak ve sayfa yenilenecek. Emin misiniz?')) return;
+    window.localStorage.removeItem(VIEW_STORAGE_KEY);
+    window.localStorage.removeItem(TABLE_SCHEMA_STORAGE_KEY);
+    window.localStorage.removeItem(TAG_SERVICE_MAP_KEY);
     window.location.reload();
   }, []);
 
@@ -841,26 +583,27 @@ function App() {
     setIsAddTaskDialogOpen(true);
   }, []);
 
-  const handleTaskDatesChange = useCallback((taskId: string, startDate: Date, dueDate: Date) => {
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== taskId) return task;
-        const entry = createTaskActivityLog(
+  const handleTaskDatesChange = useCallback(
+    (taskId: string, startDate: Date, dueDate: Date) => {
+      const entry = createTaskActivityLog(
+        taskId,
+        'Tarihler güncellendi',
+        `${format(startDate, 'd MMM yyyy', { locale: tr })} - ${format(dueDate, 'd MMM yyyy', { locale: tr })} aralığına taşındı.`
+      );
+      api
+        .updateTask(
           taskId,
-          'Tarihler güncellendi',
-          `${format(startDate, 'd MMM yyyy', { locale: tr })} - ${format(dueDate, 'd MMM yyyy', { locale: tr })} aralığına taşındı.`
-        );
-        return {
-          ...task,
-          createdAt: startDate,
-          dueDate,
-          updatedAt: new Date(),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success('Görev tarihleri güncellendi');
-  }, []);
+          { createdAt: startDate.toISOString(), dueDate: dueDate.toISOString(), activityLog: [entry] },
+          users
+        )
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+        })
+        .catch(() => toast.error('Tarih güncellenemedi'));
+      toast.success('Görev tarihleri güncellendi');
+    },
+    [users]
+  );
 
   const handleSelectPerson = useCallback((personId: string) => {
     setSelectedPersonId(personId);
@@ -871,36 +614,58 @@ function App() {
     setSelectedPortfolioCompanyId(null);
   }, []);
 
-  const handleAddServiceType = useCallback((name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    setServiceTypes((prev) => {
-      if (prev.includes(trimmed)) return prev;
-      const next = [...prev, trimmed].sort((a, b) => a.localeCompare(b, 'tr'));
-      return next;
-    });
-    toast.success(`"${trimmed}" hizmeti eklendi`);
-  }, []);
+  const handleAddServiceType = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      if (serviceTypeEntries.some((e) => e.name === trimmed)) return;
+      api
+        .createServiceType(trimmed)
+        .then((entry) => {
+          setServiceTypeEntries((prev) =>
+            [...prev, entry].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+          );
+          toast.success(`"${trimmed}" hizmeti eklendi`);
+        })
+        .catch(() => toast.error('Hizmet eklenemedi'));
+    },
+    [serviceTypeEntries]
+  );
 
-  const handleRemoveServiceType = useCallback((name: string) => {
-    setServiceTypes((prev) => prev.filter((s) => s !== name));
-    setPortfolioCompaniesState((prev) =>
-      prev.map((c) => ({
-        ...c,
-        servicesTaken: c.servicesTaken.filter((s) => s !== name),
-      }))
-    );
-    toast.success(`"${name}" hizmeti kaldırıldı`);
-  }, []);
+  const handleRemoveServiceType = useCallback(
+    (name: string) => {
+      const entry = serviceTypeEntries.find((e) => e.name === name);
+      if (!entry) return;
+      api
+        .deleteServiceType(entry.id)
+        .then(() => {
+          setServiceTypeEntries((prev) => prev.filter((e) => e.id !== entry.id));
+          setPortfolioCompaniesState((prev) =>
+            prev.map((c) => ({ ...c, servicesTaken: c.servicesTaken.filter((s) => s !== name) }))
+          );
+          toast.success(`"${name}" hizmeti kaldırıldı`);
+        })
+        .catch(() => toast.error('Hizmet kaldırılamadı'));
+    },
+    [serviceTypeEntries]
+  );
 
-  const handleAddTag = useCallback((name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    setTagList((prev) => {
-      if (prev.includes(trimmed)) return prev;
-      return [...prev, trimmed].sort((a, b) => a.localeCompare(b, 'tr'));
-    });
-  }, []);
+  const handleAddTag = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      if (tagEntries.some((e) => e.name === trimmed)) return;
+      api
+        .createTag(trimmed)
+        .then((entry) => {
+          setTagEntries((prev) =>
+            [...prev, entry].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+          );
+        })
+        .catch(() => { /* silent */ });
+    },
+    [tagEntries]
+  );
 
   const handleSetTagService = useCallback((tag: string, serviceType: string | null) => {
     setTagServiceMap((prev) => {
@@ -918,114 +683,65 @@ function App() {
     setCurrentView('portfolio');
   }, []);
 
-  const handleCreatePortfolioCompany = useCallback((payload: PortfolioCompanyDraft) => {
-    if (!canManagePortfolio) {
-      toast.error('Portföy kaydı oluşturma yetkiniz yok.');
-      return;
-    }
+  const handleCreatePortfolioCompany = useCallback(
+    (payload: PortfolioCompanyDraft) => {
+      if (!canManagePortfolio) {
+        toast.error('Portföy kaydı oluşturma yetkiniz yok.');
+        return;
+      }
+      api
+        .createPortfolioCompany(payload)
+        .then((created) => {
+          const normalized = normalizePortfolioCompany(created) ?? created;
+          setPortfolioCompaniesState((prev) => [...prev, normalized]);
+          setSelectedPortfolioCompanyId(normalized.id);
+          setCurrentView('portfolio');
+          toast.success('Portföy kaydı eklendi');
+        })
+        .catch(() => toast.error('Portföy kaydı oluşturulamadı'));
+    },
+    [canManagePortfolio]
+  );
 
-    const prev = portfolioCompaniesState;
-    const baseSlug = slugify(payload.name);
-    const baseId = `${baseSlug}-${Date.now()}`;
-    let nextId = baseId;
-    let suffix = 1;
-    while (prev.some((company) => company.id === nextId)) {
-      nextId = `${baseId}-${suffix}`;
-      suffix += 1;
-    }
+  const handleUpdatePortfolioCompany = useCallback(
+    (companyId: string, payload: PortfolioCompanyDraft) => {
+      if (!canManagePortfolio) {
+        toast.error('Portföy kaydı güncelleme yetkiniz yok.');
+        return;
+      }
+      api
+        .updatePortfolioCompany(companyId, payload)
+        .then((updated) => {
+          const normalized = normalizePortfolioCompany(updated) ?? updated;
+          setPortfolioCompaniesState((prev) =>
+            prev.map((c) => (c.id === companyId ? normalized : c))
+          );
+          toast.success('Portföy kaydı güncellendi');
+        })
+        .catch(() => toast.error('Portföy kaydı güncellenemedi'));
+    },
+    [canManagePortfolio]
+  );
 
-    const newCompany: PortfolioCompany = {
-      id: nextId,
-      name: payload.name,
-      status: payload.status,
-      startDate: payload.startDate,
-      exitDate: payload.exitDate,
-      servicesTaken: payload.servicesTaken,
-      monthlyQuotas: payload.monthlyQuotas,
-      socialMediaAccounts: [],
-      brandIdentity: payload.brandIdentity ?? {
-        logos: [],
-        logoAttachments: [],
-        colorPalette: ['#111827', '#E5E7EB'],
-        fonts: ['Inter'],
-        brandTone: 'Corporate',
-      },
-      contacts: [],
-      assignedTeamMemberIds: [],
-      monthlyContentCalendar: [],
-      notes: payload.notes,
-      activityLog: [
-        createActivityLog(nextId, 'Portfolio created', `${payload.name} portföy kaydı oluşturuldu.`),
-      ],
-    };
-
-    setPortfolioCompaniesState((current) => [...current, newCompany]);
-    setSelectedPortfolioCompanyId(nextId);
-    setCurrentView('portfolio');
-
-    toast.success('Portföy kaydı eklendi');
-  }, [canManagePortfolio, portfolioCompaniesState]);
-
-  const handleUpdatePortfolioCompany = useCallback((companyId: string, payload: PortfolioCompanyDraft) => {
-    if (!canManagePortfolio) {
-      toast.error('Portföy kaydı güncelleme yetkiniz yok.');
-      return;
-    }
-
-    const companyExists = portfolioCompaniesState.some((c) => c.id === companyId);
-    if (!companyExists) {
-      toast.error('Güncellenecek şirket bulunamadı.');
-      return;
-    }
-
-    setPortfolioCompaniesState((prev) =>
-      prev.map((company) => {
-        if (company.id !== companyId) return company;
-        return {
-          ...company,
-          name: payload.name,
-          status: payload.status,
-          startDate: payload.startDate,
-          exitDate: payload.exitDate,
-          servicesTaken: payload.servicesTaken,
-          monthlyQuotas: payload.monthlyQuotas,
-          notes: payload.notes,
-          socialMediaAccounts: payload.socialMediaAccounts ?? company.socialMediaAccounts,
-          brandIdentity: payload.brandIdentity ?? company.brandIdentity,
-          contacts: payload.contacts ?? company.contacts,
-          assignedTeamMemberIds: payload.assignedTeamMemberIds ?? company.assignedTeamMemberIds,
-          monthlyContentCalendar: payload.monthlyContentCalendar ?? company.monthlyContentCalendar,
-          activityLog: [
-            ...company.activityLog,
-            createActivityLog(company.id, 'Portfolio updated', `${payload.name} portföy kaydı güncellendi.`),
-          ],
-        };
-      })
-    );
-
-    toast.success('Portföy kaydı güncellendi');
-  }, [canManagePortfolio, portfolioCompaniesState, selectedPortfolioCompanyId]);
-
-  const handleDeletePortfolioCompany = useCallback((companyId: string) => {
-    if (!canManagePortfolio) {
-      toast.error('Portföy kaydı silme yetkiniz yok.');
-      return;
-    }
-
-    const target = portfolioCompaniesState.find((company) => company.id === companyId);
-    if (!target) {
-      toast.error('Silinecek şirket bulunamadı.');
-      return;
-    }
-
-    setPortfolioCompaniesState((prev) => prev.filter((company) => company.id !== companyId));
-
-    if (selectedPortfolioCompanyId === companyId) {
-      setSelectedPortfolioCompanyId(null);
-    }
-
-    toast.success('Portföy kaydı silindi');
-  }, [canManagePortfolio, portfolioCompaniesState, selectedPortfolioCompanyId]);
+  const handleDeletePortfolioCompany = useCallback(
+    (companyId: string) => {
+      if (!canManagePortfolio) {
+        toast.error('Portföy kaydı silme yetkiniz yok.');
+        return;
+      }
+      api
+        .deletePortfolioCompany(companyId)
+        .then(() => {
+          setPortfolioCompaniesState((prev) => prev.filter((c) => c.id !== companyId));
+          if (selectedPortfolioCompanyId === companyId) {
+            setSelectedPortfolioCompanyId(null);
+          }
+          toast.success('Portföy kaydı silindi');
+        })
+        .catch(() => toast.error('Portföy kaydı silinemedi'));
+    },
+    [canManagePortfolio, selectedPortfolioCompanyId]
+  );
 
   const handleOpenTaskDetail = useCallback((taskId: string) => {
     setSelectedTaskId(taskId);
@@ -1053,349 +769,289 @@ function App() {
       }
     ) => {
       const assignee = users.find((u) => u.id === payload.assigneeId);
-      const portfolioCompany = portfolioCompaniesState.find(
-        (company) => company.id === payload.portfolioCompanyId
-      );
-      setTasks((prev) =>
-        prev.map((task) => {
-          if (task.id !== taskId) return task;
-          const entries: ActivityLogItem[] = [];
-          if (payload.title !== task.title) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Başlık değiştirildi',
-                `"${task.title}" → "${payload.title}"`
-              )
-            );
-          }
-          if ((payload.description ?? '') !== (task.description ?? '')) {
-            entries.push(createTaskActivityLog(taskId, 'Açıklama güncellendi', ''));
-          }
-          if (payload.status !== task.status) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Durum değiştirildi',
-                `${statusLabels[task.status]} → ${statusLabels[payload.status]}`
-              )
-            );
-          }
-          if (payload.priority !== task.priority) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Öncelik değiştirildi',
-                `${priorityLabels[task.priority]} → ${priorityLabels[payload.priority]}`
-              )
-            );
-          }
-          if (payload.assigneeId !== (task.assignee?.id ?? '')) {
-            const oldName = task.assignee?.name ?? 'Atanmadı';
-            const newName = assignee?.name ?? 'Atanmadı';
-            entries.push(
-              createTaskActivityLog(taskId, 'Atanan kişi değiştirildi', `${oldName} → ${newName}`)
-            );
-          }
-          if (payload.portfolioCompanyId !== (task.portfolioCompanyId ?? '')) {
-            const oldName = task.portfolioCompanyName ?? 'Atanmamış';
-            const newName = portfolioCompany?.name ?? 'Atanmamış';
-            entries.push(
-              createTaskActivityLog(taskId, 'Portföy değiştirildi', `${oldName} → ${newName}`)
-            );
-          }
-          const oldStart =
-            task.createdAt instanceof Date ? task.createdAt : task.createdAt ? new Date(task.createdAt) : undefined;
-          const newStart = payload.startDate;
-          const oldStartStr = oldStart ? format(oldStart, 'd MMM yyyy', { locale: tr }) : '';
-          const newStartStr = newStart ? format(newStart, 'd MMM yyyy', { locale: tr }) : '';
-          if (newStart && oldStartStr !== newStartStr) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Başlangıç tarihi değiştirildi',
-                `${oldStartStr || '-'} → ${newStartStr}`
-              )
-            );
-          }
-          const oldDue = task.dueDate;
-          const newDue = payload.dueDate;
-          const oldDueStr = oldDue ? format(oldDue, 'd MMM yyyy', { locale: tr }) : '';
-          const newDueStr = newDue ? format(newDue, 'd MMM yyyy', { locale: tr }) : '';
-          if (oldDueStr !== newDueStr) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Son teslim tarihi değiştirildi',
-                `${oldDueStr || '-'} → ${newDueStr || '-'}`
-              )
-            );
-          }
-          if (payload.progress !== task.progress) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Tamamlanma oranı değiştirildi',
-                `%${task.progress} → %${payload.progress}`
-              )
-            );
-          }
-          const tagsEqual =
-            payload.tags.length === task.tags.length &&
-            payload.tags.every((t, i) => t === task.tags[i]);
-          if (!tagsEqual) {
-            entries.push(
-              createTaskActivityLog(
-                taskId,
-                'Etiketler güncellendi',
-                payload.tags.length ? payload.tags.join(', ') : '(boş)'
-              )
-            );
-          }
-          return {
-            ...task,
+      const portfolioCompany = portfolioCompaniesState.find((c) => c.id === payload.portfolioCompanyId);
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      const entries: ActivityLogItem[] = [];
+      if (payload.title !== task.title) {
+        entries.push(createTaskActivityLog(taskId, 'Başlık değiştirildi', `"${task.title}" → "${payload.title}"`));
+      }
+      if ((payload.description ?? '') !== (task.description ?? '')) {
+        entries.push(createTaskActivityLog(taskId, 'Açıklama güncellendi', ''));
+      }
+      if (payload.status !== task.status) {
+        entries.push(
+          createTaskActivityLog(
+            taskId,
+            'Durum değiştirildi',
+            `${statusLabels[task.status]} → ${statusLabels[payload.status]}`
+          )
+        );
+      }
+      if (payload.priority !== task.priority) {
+        entries.push(
+          createTaskActivityLog(
+            taskId,
+            'Öncelik değiştirildi',
+            `${priorityLabels[task.priority]} → ${priorityLabels[payload.priority]}`
+          )
+        );
+      }
+      if (payload.assigneeId !== (task.assignee?.id ?? '')) {
+        entries.push(
+          createTaskActivityLog(
+            taskId,
+            'Atanan kişi değiştirildi',
+            `${task.assignee?.name ?? 'Atanmadı'} → ${assignee?.name ?? 'Atanmadı'}`
+          )
+        );
+      }
+
+      api
+        .updateTask(
+          taskId,
+          {
             title: payload.title,
             description: payload.description,
             status: payload.status,
             priority: payload.priority,
-            assignee,
+            assigneeId: assignee?.id,
+            assigneeName: assignee?.name,
             portfolioCompanyId: portfolioCompany?.id,
             portfolioCompanyName: portfolioCompany?.name,
-            ...(payload.startDate !== undefined && { createdAt: payload.startDate }),
-            dueDate: payload.dueDate,
+            ...(payload.startDate && { createdAt: payload.startDate.toISOString() }),
+            dueDate: payload.dueDate?.toISOString(),
             progress: payload.progress,
             tags: payload.tags,
-            customFields: payload.customFields ?? task.customFields,
-            updatedAt: new Date(),
-            activityLog:
-              entries.length > 0
-                ? [...(task.activityLog ?? []), ...entries]
-                : task.activityLog,
-          };
+            customFields: payload.customFields,
+            ...(entries.length > 0 && { activityLog: entries }),
+          },
+          users
+        )
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Görev güncellendi');
+          setSelectedTaskId(null);
         })
-      );
-      toast.success('Görev güncellendi');
-      setSelectedTaskId(null);
+        .catch(() => toast.error('Görev güncellenemedi'));
     },
-    [portfolioCompaniesState]
+    [users, portfolioCompaniesState, tasks]
   );
 
-  const handleDeleteTask = useCallback((taskId: string) => {
-    const targetTask = tasks.find((task) => task.id === taskId);
-    if (!targetTask) return;
-    const confirmed = window.confirm(`"${targetTask.title}" görevini silmek istediğinize emin misiniz?`);
-    if (!confirmed) return;
-    setTasks((prev) => prev.filter((task) => task.id !== taskId));
-    toast.success('Görev silindi');
-    setSelectedTaskId(null);
-  }, [tasks]);
+  const handleDeleteTask = useCallback(
+    (taskId: string) => {
+      const targetTask = tasks.find((task) => task.id === taskId);
+      if (!targetTask) return;
+      const confirmed = window.confirm(`"${targetTask.title}" görevini silmek istediğinize emin misiniz?`);
+      if (!confirmed) return;
+      api
+        .deleteTask(taskId)
+        .then(() => {
+          setTasks((prev) => prev.filter((t) => t.id !== taskId));
+          toast.success('Görev silindi');
+          setSelectedTaskId(null);
+        })
+        .catch(() => toast.error('Görev silinemedi'));
+    },
+    [tasks]
+  );
 
-  const handleTableTaskAssigneeCommit = useCallback((taskId: string, assigneeId: string | null) => {
-    const assignee = assigneeId ? users.find((u) => u.id === assigneeId) : undefined;
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== taskId) return task;
-        if ((task.assignee?.id ?? null) === (assigneeId ?? null)) return task;
-        const oldName = task.assignee?.name ?? 'Atanmamış';
-        const newName = assignee?.name ?? 'Atanmamış';
-        const entry = createTaskActivityLog(
+  const handleTableTaskAssigneeCommit = useCallback(
+    (taskId: string, assigneeId: string | null) => {
+      const assignee = assigneeId ? users.find((u) => u.id === assigneeId) : undefined;
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      if ((task.assignee?.id ?? null) === (assigneeId ?? null)) return;
+
+      const entry = createTaskActivityLog(
+        taskId,
+        'Atanan kişi değiştirildi',
+        `${task.assignee?.name ?? 'Atanmamış'} → ${assignee?.name ?? 'Atanmamış'}`
+      );
+      api
+        .updateTask(
           taskId,
-          'Atanan kişi değiştirildi',
-          `${oldName} → ${newName}`
-        );
-        return {
-          ...task,
-          assignee,
-          updatedAt: new Date(),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success('Tasarımcı güncellendi');
-  }, []);
+          { assigneeId: assignee?.id, assigneeName: assignee?.name, activityLog: [entry] },
+          users
+        )
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Tasarımcı güncellendi');
+        })
+        .catch(() => toast.error('Atama güncellenemedi'));
+    },
+    [users, tasks]
+  );
 
-  const handleTableTaskPriorityCommit = useCallback((taskId: string, priority: Priority) => {
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== taskId) return task;
-        if (task.priority === priority) return task;
-        const entry = createTaskActivityLog(
+  const handleTableTaskPriorityCommit = useCallback(
+    (taskId: string, priority: Priority) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task || task.priority === priority) return;
+      const entry = createTaskActivityLog(
+        taskId,
+        'Öncelik değiştirildi',
+        `${priorityLabels[task.priority]} → ${priorityLabels[priority]}`
+      );
+      const nextBase = { ...task, priority };
+      api
+        .updateTask(
           taskId,
-          'Öncelik değiştirildi',
-          `${priorityLabels[task.priority]} → ${priorityLabels[priority]}`
-        );
-        const nextBase = { ...task, priority, updatedAt: new Date() };
-        return {
-          ...nextBase,
-          progress: getTaskProgress(nextBase),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success('Öncelik güncellendi');
-  }, []);
+          { priority, progress: getTaskProgress(nextBase), activityLog: [entry] },
+          users
+        )
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Öncelik güncellendi');
+        })
+        .catch(() => toast.error('Öncelik güncellenemedi'));
+    },
+    [tasks, users]
+  );
 
-  const handleTableTaskStatusCommit = useCallback((taskId: string, status: TaskStatus) => {
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== taskId) return task;
-        if (task.status === status) return task;
-        const entry = createTaskActivityLog(
+  const handleTableTaskStatusCommit = useCallback(
+    (taskId: string, status: TaskStatus) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task || task.status === status) return;
+      const entry = createTaskActivityLog(
+        taskId,
+        'Durum değiştirildi',
+        `${statusLabels[task.status]} → ${statusLabels[status]}`
+      );
+      const nextBase = { ...task, status };
+      api
+        .updateTask(
           taskId,
-          'Durum değiştirildi',
-          `${statusLabels[task.status]} → ${statusLabels[status]}`
-        );
-        const nextBase = { ...task, status, updatedAt: new Date() };
-        return {
-          ...nextBase,
-          progress: getTaskProgress(nextBase),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success('Durum güncellendi');
-  }, []);
+          { status, progress: getTaskProgress(nextBase), activityLog: [entry] },
+          users
+        )
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Durum güncellendi');
+        })
+        .catch(() => toast.error('Durum güncellenemedi'));
+    },
+    [tasks, users]
+  );
 
-  const handleTableTaskDescriptionCommit = useCallback((taskId: string, description: string) => {
-    let didChange = false;
-    setTasks((prev) => {
-      const task = prev.find((t) => t.id === taskId);
-      if (!task) return prev;
+  const handleTableTaskDescriptionCommit = useCallback(
+    (taskId: string, description: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
       const prevDesc = (task.description ?? '').trim();
-      if (prevDesc === description) return prev;
-      didChange = true;
+      if (prevDesc === description) return;
       const entry = createTaskActivityLog(taskId, 'Açıklama güncellendi', '');
       const nextDesc = description.length > 0 ? description : undefined;
-      return prev.map((t) =>
-        t.id === taskId
-          ? {
-              ...t,
-              description: nextDesc,
-              updatedAt: new Date(),
-              activityLog: [...(t.activityLog ?? []), entry],
-            }
-          : t
+      api
+        .updateTask(taskId, { description: nextDesc, activityLog: [entry] }, users)
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Brief güncellendi');
+        })
+        .catch(() => toast.error('Brief güncellenemedi'));
+    },
+    [tasks, users]
+  );
+
+  const handleBulkDeleteTasks = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      setTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
+      setSelectedTaskId((cur) => (cur && ids.includes(cur) ? null : cur));
+      toast.success(ids.length === 1 ? 'Görev silindi' : `${ids.length} görev silindi`);
+      api.bulkDeleteTasks(ids).catch(() => {
+        toast.error('Silme işlemi kısmen başarısız oldu');
+        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
+      });
+    },
+    [users]
+  );
+
+  const handleBulkReassignTasks = useCallback(
+    (ids: string[], assigneeId: string) => {
+      if (ids.length === 0) return;
+      const assignee = users.find((u) => u.id === assigneeId);
+      setTasks((prev) =>
+        prev.map((task) => {
+          if (!ids.includes(task.id)) return task;
+          return { ...task, assignee, assigneeId, assigneeName: assignee?.name, updatedAt: new Date() };
+        })
       );
-    });
-    if (didChange) toast.success('Brief güncellendi');
-  }, []);
+      toast.success(ids.length === 1 ? 'Görev devredildi' : `${ids.length} görev devredildi`);
+      api.bulkReassignTasks(ids, assigneeId, assignee?.name).catch(() => {
+        toast.error('Devret işlemi kısmen başarısız oldu');
+        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
+      });
+    },
+    [users]
+  );
 
-  const handleBulkDeleteTasks = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
-    setSelectedTaskId((cur) => (cur && ids.includes(cur) ? null : cur));
-    toast.success(ids.length === 1 ? 'Görev silindi' : `${ids.length} görev silindi`);
-  }, []);
+  const handleBulkArchiveTasks = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      setTasks((prev) =>
+        prev.map((task) =>
+          ids.includes(task.id) ? { ...task, archived: true, updatedAt: new Date() } : task
+        )
+      );
+      toast.success(ids.length === 1 ? 'Görev arşivlendi' : `${ids.length} görev arşivlendi`);
+      api.bulkArchiveTasks(ids).catch(() => {
+        toast.error('Arşivleme kısmen başarısız oldu');
+        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
+      });
+    },
+    [users]
+  );
 
-  const handleBulkReassignTasks = useCallback((ids: string[], assigneeId: string) => {
-    if (ids.length === 0) return;
-    const assignee = users.find((u) => u.id === assigneeId);
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (!ids.includes(task.id)) return task;
-        const oldName = task.assignee?.name ?? 'Atanmamış';
-        const newName = assignee?.name ?? 'Atanmamış';
-        const entry = createTaskActivityLog(
-          task.id,
-          'Atanan kişi değiştirildi',
-          `${oldName} → ${newName} (toplu devret)`
-        );
-        return {
-          ...task,
-          assignee,
-          updatedAt: new Date(),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success(
-      ids.length === 1 ? 'Görev devredildi' : `${ids.length} görev devredildi`
-    );
-  }, []);
+  const handleRestoreFromArchive = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      setTasks((prev) =>
+        prev.map((task) =>
+          ids.includes(task.id) ? { ...task, archived: false, updatedAt: new Date() } : task
+        )
+      );
+      toast.success(ids.length === 1 ? 'Görev arşivden çıkarıldı' : `${ids.length} görev arşivden çıkarıldı`);
+      Promise.all(ids.map((id) => api.setTaskArchived(id, false, users))).catch(() => {
+        toast.error('Arşivden çıkarma kısmen başarısız oldu');
+        api.getTasks(users, { archived: true }).then((archived) => {
+          setTasks((prev) =>
+            prev.map((t) => {
+              const fromApi = archived.find((a) => a.id === t.id);
+              return fromApi ?? t;
+            })
+          );
+        }).catch(() => { /* silent */ });
+      });
+    },
+    [users]
+  );
 
-  const handleBulkArchiveTasks = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (!ids.includes(task.id)) return task;
-        const entry = createTaskActivityLog(
-          task.id,
-          'Görev arşivlendi',
-          'Ana listeden gizlendi'
-        );
-        return {
-          ...task,
-          archived: true,
-          updatedAt: new Date(),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success(
-      ids.length === 1 ? 'Görev arşivlendi' : `${ids.length} görev arşivlendi`
-    );
-  }, []);
+  const handleAddAttachment = useCallback(
+    (taskId: string, attachment: TaskAttachment) => {
+      api
+        .addAttachment(taskId, attachment, users)
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Belge eklendi');
+        })
+        .catch(() => toast.error('Belge eklenemedi'));
+    },
+    [users]
+  );
 
-  const handleRestoreFromArchive = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (!ids.includes(task.id)) return task;
-        const entry = createTaskActivityLog(
-          task.id,
-          'Arşivden çıkarıldı',
-          'Görev ana listelere geri alındı.'
-        );
-        return {
-          ...task,
-          archived: undefined,
-          updatedAt: new Date(),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success(
-      ids.length === 1 ? 'Görev arşivden çıkarıldı' : `${ids.length} görev arşivden çıkarıldı`
-    );
-  }, []);
-
-  const handleAddAttachment = useCallback((taskId: string, attachment: TaskAttachment) => {
-    const entry = createTaskActivityLog(taskId, 'Belge eklendi', attachment.name);
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              attachments: [...(task.attachments ?? []), attachment],
-              updatedAt: new Date(),
-              activityLog: [...(task.activityLog ?? []), entry],
-            }
-          : task
-      )
-    );
-    toast.success('Belge eklendi');
-  }, []);
-
-  const handleRemoveAttachment = useCallback((taskId: string, attachmentId: string) => {
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== taskId) return task;
-        const removed = (task.attachments ?? []).find((a) => a.id === attachmentId);
-        const entry = createTaskActivityLog(
-          taskId,
-          'Belge kaldırıldı',
-          removed?.name ?? 'Belge'
-        );
-        return {
-          ...task,
-          attachments: (task.attachments ?? []).filter((a) => a.id !== attachmentId),
-          updatedAt: new Date(),
-          activityLog: [...(task.activityLog ?? []), entry],
-        };
-      })
-    );
-    toast.success('Belge kaldırıldı');
-  }, []);
+  const handleRemoveAttachment = useCallback(
+    (taskId: string, attachmentId: string) => {
+      api
+        .removeAttachment(taskId, attachmentId, users)
+        .then((updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+          toast.success('Belge kaldırıldı');
+        })
+        .catch(() => toast.error('Belge kaldırılamadı'));
+    },
+    [users]
+  );
 
   const handleCreateTask = useCallback(
     (taskData: {
@@ -1409,91 +1065,61 @@ function App() {
       tags: string[];
     }) => {
       const assignee = users.find((u) => u.id === taskData.assigneeId);
-      const portfolioCompany = portfolioCompaniesState.find(
-        (company) => company.id === taskData.portfolioCompanyId
-      );
-      const assigneeName = assignee ? `${assignee.name} kişisine atandı` : 'atanmadı';
+      const portfolioCompany = portfolioCompaniesState.find((c) => c.id === taskData.portfolioCompanyId);
       const statusLabel = statusLabels[taskData.status];
-      const now = new Date();
-      const taskId = `task-${Date.now()}`;
-      const taskBase: Task = {
-        id: taskId,
-        title: taskData.title,
-        description: taskData.description,
-        status: taskData.status,
-        priority: taskData.priority,
-        assignee,
-        portfolioCompanyId: portfolioCompany?.id,
-        portfolioCompanyName: portfolioCompany?.name,
-        dueDate: taskData.dueDate,
-        tags: taskData.tags,
-        progress: 0,
-        createdAt: now,
-        updatedAt: now,
-        customFields: {},
-        activityLog: [
-          createTaskActivityLog(
-            taskId,
-            'Görev oluşturuldu',
-            `${statusLabel} durumuna eklendi. ${assigneeName}.`
-          ),
-        ],
-      };
-      const newTask: Task = {
-        ...taskBase,
-        progress: getTaskProgress(taskBase),
-      };
 
-      setTasks((prev) => [...prev, newTask]);
-
-      toast.success('Görev oluşturuldu!', {
-        description: `"${taskData.title}" görevi ${statusLabel} durumuna eklendi (${assigneeName}).`,
-      });
+      api
+        .createTask(
+          {
+            title: taskData.title,
+            description: taskData.description || undefined,
+            status: taskData.status,
+            priority: taskData.priority,
+            assigneeId: assignee?.id,
+            assigneeName: assignee?.name,
+            portfolioCompanyId: portfolioCompany?.id,
+            portfolioCompanyName: portfolioCompany?.name,
+            dueDate: taskData.dueDate?.toISOString(),
+            tags: taskData.tags,
+          },
+          users
+        )
+        .then((created) => {
+          setTasks((prev) => [...prev, created]);
+          toast.success('Görev oluşturuldu!', {
+            description: `"${taskData.title}" görevi ${statusLabel} durumuna eklendi.`,
+          });
+        })
+        .catch(() => toast.error('Görev oluşturulamadı'));
     },
-    [portfolioCompaniesState]
+    [users, portfolioCompaniesState]
   );
 
-  /** Tahta sütun başlığındaki +: diyalog açmadan varsayılan görev */
-  const handleAddQuickBoardTask = useCallback((columnId: string) => {
-    const status = columnId as TaskStatus;
-    const valid: TaskStatus[] = ['brief', 'in-progress', 'review', 'revision', 'done'];
-    if (!valid.includes(status)) return;
-    const statusLabel = statusLabels[status];
-    const now = new Date();
-    const taskId = `task-${Date.now()}`;
-    const title = 'Yeni görev';
-    const taskBase: Task = {
-      id: taskId,
-      title,
-      description: undefined,
-      status,
-      priority: 'medium',
-      tags: [],
-      progress: 0,
-      createdAt: now,
-      updatedAt: now,
-      customFields: {},
-      activityLog: [
-        createTaskActivityLog(
-          taskId,
-          'Görev oluşturuldu',
-          `"${title}" ${statusLabel} sütununa eklendi.`
-        ),
-      ],
-    };
-    const newTask: Task = {
-      ...taskBase,
-      progress: getTaskProgress(taskBase),
-    };
-    setTasks((prev) => [...prev, newTask]);
-    toast.success('Görev eklendi', { description: `"${title}" ${statusLabel} sütununa eklendi.` });
-  }, []);
+  const handleAddQuickBoardTask = useCallback(
+    (columnId: string) => {
+      const status = columnId as TaskStatus;
+      const valid: TaskStatus[] = ['brief', 'in-progress', 'review', 'revision', 'done'];
+      if (!valid.includes(status)) return;
+      const statusLabel = statusLabels[status];
+      api
+        .createTask({ title: 'Yeni görev', status, priority: 'medium', tags: [] }, users)
+        .then((created) => {
+          setTasks((prev) => [...prev, created]);
+          toast.success('Görev eklendi', { description: `"Yeni görev" ${statusLabel} sütununa eklendi.` });
+        })
+        .catch(() => toast.error('Görev eklenemedi'));
+    },
+    [users]
+  );
 
   const selectedTask = selectedTaskId
     ? tasks.find((task) => task.id === selectedTaskId) ?? null
     : null;
 
+  if (isLoading) return <LoadingScreen />;
+
   return (
+    <UsersProvider users={users}>
     <div className="flex h-screen bg-white overflow-hidden">
       <Toaster position="top-right" richColors />
 
@@ -1643,6 +1269,7 @@ function App() {
         onSetTagService={handleSetTagService}
       />
     </div>
+    </UsersProvider>
   );
 }
 
