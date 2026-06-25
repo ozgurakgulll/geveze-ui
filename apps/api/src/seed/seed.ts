@@ -77,11 +77,9 @@ const rawTasks = [
 const seedPortfolio = [
   {
     name: 'TechStart AŞ',
-    industry: 'Teknoloji',
     status: 'active' as const,
-    website: 'https://techstart.example.com',
+    startDate: '2024-01-15',
     servicesTaken: ['Sosyal Medya Yönetimi', 'Grafik Tasarım'],
-    description: 'Erken aşama teknoloji girişimi',
     notes: ['İlk ay onboarding tamamlandı', 'Logo revizyonu bekleniyor'],
     assignedTeamMemberIds: [],
     monthlyQuotas: { video: 2, post: 10, story: 16 },
@@ -93,10 +91,9 @@ const seedPortfolio = [
   },
   {
     name: 'GreenEarth Organics',
-    industry: 'Gıda & Tarım',
     status: 'active' as const,
+    startDate: '2023-09-01',
     servicesTaken: ['Sosyal Medya Yönetimi', 'Video Prodüksiyon', 'Grafik Tasarım'],
-    description: 'Organik ürün markası',
     notes: ['İçerik takvimi onaylandı'],
     assignedTeamMemberIds: [],
     monthlyQuotas: { video: 4, post: 12, story: 20 },
@@ -108,10 +105,10 @@ const seedPortfolio = [
   },
   {
     name: 'MediCare Klinik',
-    industry: 'Sağlık',
-    status: 'inactive' as const,
+    status: 'on-hold' as const,
+    startDate: '2023-06-01',
+    exitDate: '2024-03-31',
     servicesTaken: ['Web Tasarım'],
-    description: 'Özel sağlık kliniği',
     notes: [],
     assignedTeamMemberIds: [],
     monthlyQuotas: { video: 0, post: 4, story: 8 },

@@ -122,8 +122,8 @@ export function PortfolioView({
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{company.name}</CardTitle>
-                    <Badge className={statusMap[company.status].className}>
-                      {statusMap[company.status].label}
+                    <Badge className={(statusMap[company.status] ?? statusMap['on-hold']).className}>
+                      {(statusMap[company.status] ?? statusMap['on-hold']).label}
                     </Badge>
                   </div>
                 </CardHeader>
