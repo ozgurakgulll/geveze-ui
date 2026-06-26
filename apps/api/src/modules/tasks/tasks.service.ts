@@ -10,6 +10,12 @@ export interface TaskFilters {
   archived?: boolean;
   assigneeId?: string;
   status?: string;
+  portfolioCompanyId?: string;
+  priority?: string;
+  tags?: string[];
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  search?: string;
 }
 
 @Injectable()
@@ -30,6 +36,16 @@ export class TasksService {
 
     if (filters.assigneeId) query['assigneeId'] = filters.assigneeId;
     if (filters.status) query['status'] = filters.status;
+    if (filters.portfolioCompanyId) query['portfolioCompanyId'] = filters.portfolioCompanyId;
+    if (filters.priority) query['priority'] = filters.priority;
+    if (filters.tags?.length) query['tags'] = { $all: filters.tags };
+    if (filters.search) query['title'] = { $regex: filters.search, $options: 'i' };
+    if (filters.dueDateFrom || filters.dueDateTo) {
+      const dueDateFilter: Record<string, Date> = {};
+      if (filters.dueDateFrom) dueDateFilter['$gte'] = new Date(filters.dueDateFrom);
+      if (filters.dueDateTo) dueDateFilter['$lte'] = new Date(filters.dueDateTo);
+      query['dueDate'] = dueDateFilter;
+    }
 
     const docs = await this.taskModel.find(query).sort({ createdAt: -1 }).lean().exec();
     return docs.map(this.toTask);

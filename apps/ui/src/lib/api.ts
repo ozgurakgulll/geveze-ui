@@ -117,12 +117,28 @@ export const updateUserRole = (id: string, role: string): Promise<User> =>
 
 export async function getTasks(
   userList: User[],
-  params?: { archived?: boolean; assigneeId?: string; status?: string },
+  params?: {
+    archived?: boolean;
+    assigneeId?: string;
+    status?: string;
+    portfolioCompanyId?: string;
+    priority?: string;
+    tags?: string[];
+    dueDateFrom?: string;
+    dueDateTo?: string;
+    search?: string;
+  },
 ): Promise<Task[]> {
   const q = new URLSearchParams();
   if (params?.archived !== undefined) q.set('archived', String(params.archived));
   if (params?.assigneeId) q.set('assigneeId', params.assigneeId);
   if (params?.status) q.set('status', params.status);
+  if (params?.portfolioCompanyId) q.set('portfolioCompanyId', params.portfolioCompanyId);
+  if (params?.priority) q.set('priority', params.priority);
+  if (params?.tags?.length) q.set('tags', params.tags.join(','));
+  if (params?.dueDateFrom) q.set('dueDateFrom', params.dueDateFrom);
+  if (params?.dueDateTo) q.set('dueDateTo', params.dueDateTo);
+  if (params?.search) q.set('search', params.search);
   const qs = q.toString();
   const raw = await request<Record<string, unknown>[]>(`/tasks${qs ? `?${qs}` : ''}`);
   return raw.map((t) => parseApiTask(t, userList));

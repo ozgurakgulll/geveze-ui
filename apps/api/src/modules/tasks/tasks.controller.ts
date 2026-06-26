@@ -71,12 +71,24 @@ export class TasksController {
     @Query('archived') archived?: string,
     @Query('assigneeId') assigneeId?: string,
     @Query('status') status?: string,
+    @Query('portfolioCompanyId') portfolioCompanyId?: string,
+    @Query('priority') priority?: string,
+    @Query('tags') tags?: string,
+    @Query('dueDateFrom') dueDateFrom?: string,
+    @Query('dueDateTo') dueDateTo?: string,
+    @Query('search') search?: string,
   ): Promise<Task[]> {
-    const effectiveAssigneeId = assigneeId;
+    void req;
     const filters: TaskFilters = {
       ...(archived !== undefined ? { archived: archived === 'true' } : {}),
-      ...(effectiveAssigneeId ? { assigneeId: effectiveAssigneeId } : {}),
+      ...(assigneeId ? { assigneeId } : {}),
       ...(status ? { status } : {}),
+      ...(portfolioCompanyId ? { portfolioCompanyId } : {}),
+      ...(priority ? { priority } : {}),
+      ...(tags ? { tags: tags.split(',').map((t) => t.trim()).filter(Boolean) } : {}),
+      ...(dueDateFrom ? { dueDateFrom } : {}),
+      ...(dueDateTo ? { dueDateTo } : {}),
+      ...(search ? { search } : {}),
     };
     return this.tasksService.findAll(filters);
   }
