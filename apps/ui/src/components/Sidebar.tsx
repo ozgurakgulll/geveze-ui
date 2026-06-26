@@ -199,6 +199,20 @@ export function Sidebar({
             <Archive className="h-5 w-5 flex-shrink-0" />
             {!effectiveCollapsed && <span>Arşiv</span>}
           </button>
+          <button
+            type="button"
+            onClick={() => handleViewChange('trash')}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              currentView === 'trash'
+                ? 'bg-[#E5E7FF] text-[#6161FF]'
+                : 'text-gray-500 hover:bg-gray-100',
+              effectiveCollapsed && 'justify-center px-2'
+            )}
+          >
+            <Trash2 className="h-5 w-5 flex-shrink-0" />
+            {!effectiveCollapsed && <span>Son Silinenler</span>}
+          </button>
         </div>
 
         <Separator className="flex-shrink-0 my-2 mx-4" />

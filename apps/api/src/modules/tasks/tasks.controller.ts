@@ -94,6 +94,22 @@ export class TasksController {
     return this.tasksService.remove(id);
   }
 
+  @Get('deleted')
+  findDeleted(): Promise<Task[]> {
+    return this.tasksService.findDeleted();
+  }
+
+  @Patch(':id/restore')
+  restoreDeleted(@Param('id') id: string): Promise<Task> {
+    return this.tasksService.restoreDeleted(id);
+  }
+
+  @Delete(':id/permanent')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  permanentDelete(@Param('id') id: string): Promise<void> {
+    return this.tasksService.permanentDelete(id);
+  }
+
   @Patch('bulk/delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   bulkDelete(@Body() body: BulkIdsDto): Promise<void> {

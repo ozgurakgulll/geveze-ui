@@ -128,6 +128,19 @@ export async function updateTask(
 export const deleteTask = (id: string): Promise<void> =>
   request<void>(`/tasks/${id}`, { method: 'DELETE' });
 
+export async function getDeletedTasks(userList: User[]): Promise<Task[]> {
+  const raw = await request<Record<string, unknown>[]>('/tasks/deleted');
+  return raw.map((t) => parseApiTask(t, userList));
+}
+
+export async function restoreDeletedTask(id: string, userList: User[]): Promise<Task> {
+  const raw = await request<Record<string, unknown>>(`/tasks/${id}/restore`, { method: 'PATCH' });
+  return parseApiTask(raw, userList);
+}
+
+export const permanentDeleteTask = (id: string): Promise<void> =>
+  request<void>(`/tasks/${id}/permanent`, { method: 'DELETE' });
+
 export async function setTaskArchived(id: string, archived: boolean, userList: User[]): Promise<Task> {
   const raw = await request<Record<string, unknown>>(`/tasks/${id}/archive`, {
     method: 'PATCH',

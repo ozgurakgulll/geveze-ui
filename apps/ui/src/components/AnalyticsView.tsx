@@ -145,7 +145,7 @@ function KpiCard({
   );
 }
 
-function OverviewTab({ tasks, companies }: { tasks: Task[]; companies: PortfolioCompany[] }) {
+function OverviewTab({ tasks, companies, onTaskClick }: { tasks: Task[]; companies: PortfolioCompany[]; onTaskClick?: (id: string) => void }) {
   const stats = useMemo(() => {
     const total = tasks.length;
     const done = tasks.filter((t) => t.status === 'done').length;
@@ -273,7 +273,7 @@ function OverviewTab({ tasks, companies }: { tasks: Task[]; companies: Portfolio
                 overdueTasks.map((task) => {
                   const days = getOverdueCalendarDaysFromDue(task);
                   return (
-                    <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <div key={task.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => onTaskClick?.(task.id)}>
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColors[task.priority] }} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
@@ -766,7 +766,7 @@ function ContentTab({ companies, serviceTypes }: { companies: PortfolioCompany[]
   );
 }
 
-export function AnalyticsView({ tasks, companies, serviceTypes = [], onTaskClick: _onTaskClick, onPersonSelect, onCompanySelect }: AnalyticsViewProps) {
+export function AnalyticsView({ tasks, companies, serviceTypes = [], onTaskClick, onPersonSelect, onCompanySelect }: AnalyticsViewProps) {
   const effectiveServiceTypes = serviceTypes.length > 0 ? serviceTypes : DEFAULT_SERVICE_TYPES;
   return (
     <ScrollArea className="h-full">
@@ -802,7 +802,7 @@ export function AnalyticsView({ tasks, companies, serviceTypes = [], onTaskClick
           </TabsList>
 
           <TabsContent value="overview">
-            <OverviewTab tasks={tasks} companies={companies} />
+            <OverviewTab tasks={tasks} companies={companies} onTaskClick={onTaskClick} />
           </TabsContent>
           <TabsContent value="team">
             <TeamTab tasks={tasks} companies={companies} onPersonSelect={onPersonSelect} />

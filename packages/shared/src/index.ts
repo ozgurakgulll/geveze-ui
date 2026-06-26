@@ -20,7 +20,8 @@ export type ViewType =
   | 'calendar'
   | 'person'
   | 'analytics'
-  | 'archive';
+  | 'archive'
+  | 'trash';
 
 export type PortfolioStatus = 'active' | 'on-hold' | 'left';
 
@@ -139,6 +140,7 @@ export interface Task {
   activityLog?: ActivityLogItem[];
   attachments?: TaskAttachment[];
   archived?: boolean;
+  deletedAt?: string | null;
 }
 
 export interface Column {

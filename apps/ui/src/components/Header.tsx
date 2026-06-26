@@ -78,6 +78,7 @@ export function Header({
     person: 'Kişi',
     analytics: 'Analitik',
     archive: 'Arşiv',
+    trash: 'Son Silinenler',
   };
 
   return (

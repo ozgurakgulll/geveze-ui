@@ -837,7 +837,7 @@ export function PortfolioDetailView({
             <Sec title="Şirkete Atanan Görevler" icon={<CheckSquare className="h-3.5 w-3.5" />} badge={<Badge variant="secondary" className="text-[9px]">{companyTasks.length}</Badge>}>
               <div className="space-y-1">
                 {companyTasks.slice(0, 6).map((t) => (
-                  <div key={t.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors" onDoubleClick={() => onTaskClick?.(t.id)}>
+                  <div key={t.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => onTaskClick?.(t.id)}>
                     <span className="text-xs font-medium text-gray-800 truncate flex-1 mr-3">{t.title}</span>
                     <Badge variant="outline" className="text-[10px] shrink-0">{t.status}</Badge>
                   </div>

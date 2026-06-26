@@ -53,6 +53,9 @@ export class TaskModel {
   @Prop({ type: Boolean, default: false })
   archived: boolean;
 
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+
   @Prop({
     type: [
       {
@@ -93,6 +96,7 @@ TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ archived: 1 });
 TaskSchema.index({ dueDate: 1 });
 TaskSchema.index({ portfolioCompanyId: 1 });
+TaskSchema.index({ deletedAt: 1 });
 
 TaskSchema.set('toJSON', {
   virtuals: true,

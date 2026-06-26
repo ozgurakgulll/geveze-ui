@@ -437,7 +437,7 @@ export function PersonView({
                   <div
                     key={task.id}
                     className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onDoubleClick={() => onTaskClick(task.id)}
+                    onClick={() => onTaskClick(task.id)}
                   >
                     <div
                       className="w-1.5 h-8 rounded-full shrink-0"

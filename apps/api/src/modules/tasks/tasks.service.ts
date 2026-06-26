@@ -20,7 +20,7 @@ export class TasksService {
   ) {}
 
   async findAll(filters: TaskFilters = {}): Promise<Task[]> {
-    const query: FilterQuery<TaskDocument> = {};
+    const query: FilterQuery<TaskDocument> = { deletedAt: null };
 
     if (filters.archived !== undefined) {
       query['archived'] = filters.archived;
@@ -36,8 +36,42 @@ export class TasksService {
   }
 
   async findAllArchived(): Promise<Task[]> {
-    const docs = await this.taskModel.find({ archived: true }).sort({ updatedAt: -1 }).lean().exec();
+    const docs = await this.taskModel.find({ archived: true, deletedAt: null }).sort({ updatedAt: -1 }).lean().exec();
     return docs.map(this.toTask);
+  }
+
+  async findDeleted(): Promise<Task[]> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const docs = await this.taskModel
+      .find({ deletedAt: { $ne: null, $gte: cutoff } })
+      .sort({ deletedAt: -1 })
+      .lean()
+      .exec();
+    return docs.map(this.toTask);
+  }
+
+  async restoreDeleted(id: string): Promise<Task> {
+    const doc = await this.taskModel
+      .findByIdAndUpdate(
+        id,
+        { deletedAt: null, archived: false, $push: { activityLog: this.makeLog('Görev geri alındı', 'Son silinenlerden geri yüklendi') } },
+        { new: true },
+      )
+      .lean()
+      .exec();
+    if (!doc) throw new NotFoundException(`Task ${id} bulunamadı`);
+    return this.toTask(doc);
+  }
+
+  async permanentDelete(id: string): Promise<void> {
+    const result = await this.taskModel.findByIdAndDelete(id).exec();
+    if (!result) throw new NotFoundException(`Task ${id} bulunamadı`);
+  }
+
+  async cleanupExpiredDeleted(): Promise<number> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const result = await this.taskModel.deleteMany({ deletedAt: { $lt: cutoff } }).exec();
+    return result.deletedCount ?? 0;
   }
 
   async findById(id: string): Promise<Task> {
@@ -82,8 +116,11 @@ export class TasksService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.taskModel.findByIdAndDelete(id).exec();
-    if (!result) throw new NotFoundException(`Task ${id} bulunamadı`);
+    const doc = await this.taskModel.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date(), $push: { activityLog: this.makeLog('Görev silindi', 'Son silinenler klasörüne taşındı (30 gün)') } },
+    ).exec();
+    if (!doc) throw new NotFoundException(`Task ${id} bulunamadı`);
   }
 
   async setArchived(id: string, archived: boolean): Promise<Task> {
@@ -104,7 +141,10 @@ export class TasksService {
   }
 
   async bulkDelete(ids: string[]): Promise<void> {
-    await this.taskModel.deleteMany({ _id: { $in: ids } }).exec();
+    await this.taskModel.updateMany(
+      { _id: { $in: ids } },
+      { deletedAt: new Date(), $push: { activityLog: this.makeLog('Görev silindi', 'Son silinenler klasörüne taşındı (toplu, 30 gün)') } },
+    ).exec();
   }
 
   async bulkReassign(ids: string[], assigneeId: string, assigneeName?: string): Promise<void> {

@@ -7,6 +7,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { TaskDetailDialog } from '@/components/TaskDetailDialog';
 import { AppViewRouter } from '@/components/app/AppViewRouter';
+import { RecentlyDeletedPage } from '@/components/RecentlyDeletedPage';
 import { LoginPage } from '@/components/LoginPage';
 import { useAuth } from '@/contexts/AuthContext';
 import type {
@@ -342,7 +343,8 @@ const isViewType = (value: unknown): value is ViewType => {
     value === 'calendar' ||
     value === 'person' ||
     value === 'analytics' ||
-    value === 'archive'
+    value === 'archive' ||
+    value === 'trash'
   );
 };
 
@@ -429,6 +431,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [deletedTasks, setDeletedTasks] = useState<Task[]>([]);
   const [portfolioCompaniesState, setPortfolioCompaniesState] = useState<PortfolioCompany[]>([]);
   const [tagEntries, setTagEntries] = useState<{ id: string; name: string }[]>([]);
   const [serviceTypeEntries, setServiceTypeEntries] = useState<{ id: string; name: string }[]>([]);
@@ -459,8 +462,12 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         );
         // member sadece kendine atanan görevleri görür (backend de filtreler, bu ek güvence)
         const taskParams = appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined;
-        const fetchedTasks = await api.getTasks(fetchedUsers, taskParams);
+        const [fetchedTasks, fetchedDeleted] = await Promise.all([
+          api.getTasks(fetchedUsers, taskParams),
+          api.getDeletedTasks(fetchedUsers),
+        ]);
         setTasks(fetchedTasks);
+        setDeletedTasks(fetchedDeleted);
       })
       .catch(() => {
         toast.error('API bağlantı hatası — veriler yüklenemedi', {
@@ -860,13 +867,15 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
     (taskId: string) => {
       const targetTask = tasks.find((task) => task.id === taskId);
       if (!targetTask) return;
-      const confirmed = window.confirm(`"${targetTask.title}" görevini silmek istediğinize emin misiniz?`);
+      const confirmed = window.confirm(`"${targetTask.title}" görevi son silinenler klasörüne taşınsın mı?`);
       if (!confirmed) return;
       api
         .deleteTask(taskId)
         .then(() => {
+          const deletedTask = { ...targetTask, deletedAt: new Date().toISOString() };
           setTasks((prev) => prev.filter((t) => t.id !== taskId));
-          toast.success('Görev silindi');
+          setDeletedTasks((prev) => [deletedTask, ...prev]);
+          toast.success('Görev son silinenler klasörüne taşındı');
           setSelectedTaskId(null);
         })
         .catch(() => toast.error('Görev silinemedi'));
@@ -973,15 +982,18 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const handleBulkDeleteTasks = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return;
+      const deletedNow = new Date().toISOString();
+      const movedTasks = tasks.filter((t) => ids.includes(t.id)).map((t) => ({ ...t, deletedAt: deletedNow }));
       setTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
+      setDeletedTasks((prev) => [...movedTasks, ...prev]);
       setSelectedTaskId((cur) => (cur && ids.includes(cur) ? null : cur));
-      toast.success(ids.length === 1 ? 'Görev silindi' : `${ids.length} görev silindi`);
+      toast.success(ids.length === 1 ? 'Görev son silinenler klasörüne taşındı' : `${ids.length} görev son silinenler klasörüne taşındı`);
       api.bulkDeleteTasks(ids).catch(() => {
         toast.error('Silme işlemi kısmen başarısız oldu');
         api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
       });
     },
-    [users]
+    [tasks, users, appRole, authUser]
   );
 
   const handleBulkReassignTasks = useCallback(
@@ -1042,6 +1054,56 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       });
     },
     [users]
+  );
+
+  const handleRestoreFromTrash = useCallback(
+    (taskId: string) => {
+      api.restoreDeletedTask(taskId, users)
+        .then((restored) => {
+          setDeletedTasks((prev) => prev.filter((t) => t.id !== taskId));
+          setTasks((prev) => [restored, ...prev]);
+          toast.success('Görev geri alındı');
+        })
+        .catch(() => toast.error('Görev geri alınamadı'));
+    },
+    [users]
+  );
+
+  const handlePermanentDeleteTask = useCallback(
+    (taskId: string) => {
+      api.permanentDeleteTask(taskId)
+        .then(() => {
+          setDeletedTasks((prev) => prev.filter((t) => t.id !== taskId));
+          toast.success('Görev kalıcı olarak silindi');
+        })
+        .catch(() => toast.error('Görev silinemedi'));
+    },
+    []
+  );
+
+  const handleBulkRestoreFromTrash = useCallback(
+    (ids: string[]) => {
+      Promise.all(ids.map((id) => api.restoreDeletedTask(id, users)))
+        .then((restored) => {
+          setDeletedTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
+          setTasks((prev) => [...restored, ...prev]);
+          toast.success(ids.length === 1 ? 'Görev geri alındı' : `${ids.length} görev geri alındı`);
+        })
+        .catch(() => toast.error('Geri alma kısmen başarısız oldu'));
+    },
+    [users]
+  );
+
+  const handleBulkPermanentDelete = useCallback(
+    (ids: string[]) => {
+      Promise.all(ids.map((id) => api.permanentDeleteTask(id)))
+        .then(() => {
+          setDeletedTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
+          toast.success(ids.length === 1 ? 'Görev kalıcı silindi' : `${ids.length} görev kalıcı silindi`);
+        })
+        .catch(() => toast.error('Kalıcı silme kısmen başarısız oldu'));
+    },
+    []
   );
 
   const handleAddAttachment = useCallback(
@@ -1196,6 +1258,15 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         />
 
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-50/50">
+          {currentView === 'trash' ? (
+            <RecentlyDeletedPage
+              tasks={deletedTasks}
+              onRestore={handleRestoreFromTrash}
+              onPermanentDelete={handlePermanentDeleteTask}
+              onBulkRestore={handleBulkRestoreFromTrash}
+              onBulkPermanentDelete={handleBulkPermanentDelete}
+            />
+          ) : (
           <AppViewRouter
             currentView={currentView}
             filteredTasks={filteredTasks}
@@ -1247,6 +1318,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
             tagServiceMap={tagServiceMap}
             handleAddAttachment={handleAddAttachment}
           />
+          )}
         </main>
       </div>
 

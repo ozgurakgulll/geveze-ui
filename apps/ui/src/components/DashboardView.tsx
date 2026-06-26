@@ -272,7 +272,7 @@ export function DashboardView({ tasks, onTaskClick }: DashboardViewProps) {
                   <div
                     key={task.id}
                     className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                    onDoubleClick={() => onTaskClick(task.id)}
+                    onClick={() => onTaskClick(task.id)}
                   >
                     <div
                       className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
@@ -326,7 +326,7 @@ export function DashboardView({ tasks, onTaskClick }: DashboardViewProps) {
                       <div
                         key={task.id}
                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                        onDoubleClick={() => onTaskClick(task.id)}
+                        onClick={() => onTaskClick(task.id)}
                       >
                         <div
                           className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
