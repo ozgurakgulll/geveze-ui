@@ -8,6 +8,10 @@ class CreateTagDto {
   @IsString()
   @MinLength(1)
   name: string;
+
+  @IsString()
+  @MinLength(4)
+  color: string;
 }
 
 @Controller('tags')
@@ -21,7 +25,7 @@ export class TagsController {
 
   @Post()
   create(@Body() dto: CreateTagDto): Promise<TagEntry> {
-    return this.tagsService.create(dto.name);
+    return this.tagsService.create(dto.name, dto.color);
   }
 
   @Delete(':id')

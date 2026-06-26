@@ -205,13 +205,13 @@ export const deletePortfolioCompany = (id: string): Promise<void> =>
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
 
-export const getTags = (): Promise<{ id: string; name: string }[]> =>
-  request<{ id: string; name: string }[]>('/tags');
+export const getTags = (): Promise<{ id: string; name: string; color: string }[]> =>
+  request<{ id: string; name: string; color: string }[]>('/tags');
 
-export const createTag = (name: string): Promise<{ id: string; name: string }> =>
-  request<{ id: string; name: string }>('/tags', {
+export const createTag = (name: string, color: string): Promise<{ id: string; name: string; color: string }> =>
+  request<{ id: string; name: string; color: string }>('/tags', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, color }),
   });
 
 export const deleteTag = (id: string): Promise<void> =>

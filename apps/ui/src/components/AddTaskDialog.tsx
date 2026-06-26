@@ -18,14 +18,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+
+import { LabelChip } from '@/components/ui/LabelChip';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, X, Plus } from 'lucide-react';
+import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -54,7 +55,8 @@ interface AddTaskDialogProps {
   defaultDueDate?: Date;
   defaultAssigneeId?: string;
   availableTags?: string[];
-  onAddTag?: (name: string) => void;
+  tagColorMap?: Record<string, string>;
+  onAddTag?: (name: string, color?: string) => void;
   tagServiceMap?: Record<string, string>;
   onSetTagService?: (tag: string, serviceType: string | null) => void;
 }
@@ -74,6 +76,7 @@ export function AddTaskDialog({
   defaultDueDate,
   defaultAssigneeId,
   availableTags: availableTagsProp,
+  tagColorMap = {},
   onAddTag,
   tagServiceMap: _tagServiceMap,
   onSetTagService: _onSetTagService,
@@ -369,38 +372,40 @@ export function AddTaskDialog({
             </div>
           </div>
 
-          {/* Tags */}
+          {/* Labels */}
           <div className="space-y-2">
             <Label>Etiketler</Label>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-1.5">
               {availableTags.map((tag) => (
-                <button
+                <LabelChip
                   key={tag}
-                  type="button"
+                  name={tag}
+                  color={tagColorMap[tag] ?? '#6161FF'}
+                  selected={selectedTags.includes(tag)}
                   onClick={() => toggleTag(tag)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-                    selectedTags.includes(tag)
-                      ? 'bg-[#6161FF] text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  )}
-                >
-                  {tag}
-                </button>
+                  className={selectedTags.includes(tag) ? 'ring-2' : 'opacity-70 hover:opacity-100'}
+                />
               ))}
             </div>
+            {selectedTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-gray-100">
+                {selectedTags.map((tag) => (
+                  <LabelChip
+                    key={tag}
+                    name={tag}
+                    color={tagColorMap[tag] ?? '#6161FF'}
+                    onRemove={() => toggleTag(tag)}
+                  />
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
               <Input
-                placeholder="Özel etiket ekle..."
+                placeholder="Yeni etiket adı..."
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addNewTag(e);
-                  }
-                }}
-                className="flex-1"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewTag(e); } }}
+                className="flex-1 text-sm"
               />
               <Button
                 type="button"
@@ -408,31 +413,10 @@ export function AddTaskDialog({
                 onClick={(e) => addNewTag(e)}
                 onPointerDownCapture={(e) => e.stopPropagation()}
                 title="Etiket ekle"
-                aria-label="Yeni etiket ekle"
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            {selectedTags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {selectedTags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="gap-1 px-2 py-1 bg-[#6161FF]/10 text-[#6161FF] hover:bg-[#6161FF]/20"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className="hover:text-[#6161FF]"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
           </div>
 
           <DialogFooter>

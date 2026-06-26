@@ -433,11 +433,15 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const [tasks, setTasks] = useState<Task[]>([]);
   const [deletedTasks, setDeletedTasks] = useState<Task[]>([]);
   const [portfolioCompaniesState, setPortfolioCompaniesState] = useState<PortfolioCompany[]>([]);
-  const [tagEntries, setTagEntries] = useState<{ id: string; name: string }[]>([]);
+  const [tagEntries, setTagEntries] = useState<{ id: string; name: string; color: string }[]>([]);
   const [serviceTypeEntries, setServiceTypeEntries] = useState<{ id: string; name: string }[]>([]);
 
   // ── Derived lists ──
   const tagList = useMemo(() => tagEntries.map((e) => e.name), [tagEntries]);
+  const tagColorMap = useMemo(
+    () => Object.fromEntries(tagEntries.map((e) => [e.name, e.color])),
+    [tagEntries]
+  );
   const serviceTypes = useMemo(() => serviceTypeEntries.map((e) => e.name), [serviceTypeEntries]);
 
   const appRole = authUser?.role ?? 'member';
@@ -675,12 +679,12 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   );
 
   const handleAddTag = useCallback(
-    (name: string) => {
+    (name: string, color = '#6161FF') => {
       const trimmed = name.trim();
       if (!trimmed) return;
       if (tagEntries.some((e) => e.name === trimmed)) return;
       api
-        .createTag(trimmed)
+        .createTag(trimmed, color)
         .then((entry) => {
           setTagEntries((prev) =>
             [...prev, entry].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
@@ -1315,7 +1319,6 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
             setSelectedPersonId={setSelectedPersonId}
             setCurrentView={setCurrentView}
             handleSelectPerson={handleSelectPerson}
-            tagServiceMap={tagServiceMap}
             handleAddAttachment={handleAddAttachment}
           />
           )}
@@ -1331,9 +1334,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         defaultDueDate={addTaskDefaultDueDate}
         defaultAssigneeId={addTaskDefaultAssigneeId}
         availableTags={tagList}
+        tagColorMap={tagColorMap}
         onAddTag={handleAddTag}
-        tagServiceMap={tagServiceMap}
-        onSetTagService={handleSetTagService}
       />
 
       <TaskDetailDialog
@@ -1355,9 +1357,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         onAddAttachment={handleAddAttachment}
         onRemoveAttachment={handleRemoveAttachment}
         availableTags={tagList}
+        tagColorMap={tagColorMap}
         onAddTag={handleAddTag}
-        tagServiceMap={tagServiceMap}
-        onSetTagService={handleSetTagService}
       />
     </div>
     </UsersProvider>

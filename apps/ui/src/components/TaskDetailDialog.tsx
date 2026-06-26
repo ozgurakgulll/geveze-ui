@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { LabelChip } from '@/components/ui/LabelChip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskCommentsPanel } from '@/components/TaskCommentsPanel';
@@ -56,7 +57,8 @@ interface TaskDetailDialogProps {
   onAddAttachment?: (taskId: string, attachment: TaskAttachment) => void;
   onRemoveAttachment?: (taskId: string, attachmentId: string) => void;
   availableTags?: string[];
-  onAddTag?: (name: string) => void;
+  tagColorMap?: Record<string, string>;
+  onAddTag?: (name: string, color?: string) => void;
   tagServiceMap?: Record<string, string>;
   onSetTagService?: (tag: string, serviceType: string | null) => void;
   /** Tablo görünümünden açıldığında sağdan kayan panel */
@@ -128,7 +130,8 @@ interface TaskDetailDialogContentProps {
   onAddAttachment?: (taskId: string, attachment: TaskAttachment) => void;
   onRemoveAttachment?: (taskId: string, attachmentId: string) => void;
   availableTags?: string[];
-  onAddTag?: (name: string) => void;
+  tagColorMap?: Record<string, string>;
+  onAddTag?: (name: string, color?: string) => void;
   tagServiceMap?: Record<string, string>;
   onSetTagService?: (tag: string, serviceType: string | null) => void;
   presentation?: TaskDetailPresentation;
@@ -152,6 +155,7 @@ function TaskDetailDialogContent({
   onAddAttachment,
   onRemoveAttachment,
   availableTags: availableTagsProp = [],
+  tagColorMap = {},
   onAddTag,
   tagServiceMap: _tagServiceMap,
   onSetTagService: _onSetTagService,
@@ -568,36 +572,38 @@ function TaskDetailDialogContent({
                 </div>
 
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">Etiketler</div>
-                  <div className="flex flex-wrap gap-2 mb-2">
+                  <div className="text-xs font-medium text-gray-500 mb-2">Etiketler</div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
                     {availableTags.map((tag) => (
-                      <button
+                      <LabelChip
                         key={tag}
-                        type="button"
+                        name={tag}
+                        color={tagColorMap[tag] ?? '#6161FF'}
+                        selected={selectedTags.includes(tag)}
                         onClick={() => toggleTag(tag)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
-                          selectedTags.includes(tag)
-                            ? 'bg-[#6161FF] text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        )}
-                      >
-                        {tag}
-                      </button>
+                        className={selectedTags.includes(tag) ? 'ring-2' : 'opacity-60 hover:opacity-100'}
+                      />
                     ))}
                   </div>
+                  {selectedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2 pb-2 border-b border-gray-100">
+                      {selectedTags.map((tag) => (
+                        <LabelChip
+                          key={tag}
+                          name={tag}
+                          color={tagColorMap[tag] ?? '#6161FF'}
+                          onRemove={() => toggleTag(tag)}
+                        />
+                      ))}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Özel etiket ekle..."
+                      placeholder="Yeni etiket adı..."
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addNewTag(e);
-                        }
-                      }}
-                      className="flex-1"
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewTag(e); } }}
+                      className="flex-1 text-sm"
                     />
                     <Button
                       type="button"
@@ -605,31 +611,10 @@ function TaskDetailDialogContent({
                       onClick={(e) => addNewTag(e)}
                       onPointerDownCapture={(e) => e.stopPropagation()}
                       title="Etiket ekle"
-                      aria-label="Yeni etiket ekle"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  {selectedTags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedTags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="gap-1 px-2 py-1 bg-[#6161FF]/10 text-[#6161FF] hover:bg-[#6161FF]/20"
-                        >
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => toggleTag(tag)}
-                            className="hover:text-[#6161FF]"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {customCols.length > 0 && (
@@ -1010,6 +995,7 @@ export function TaskDetailDialog({
   onAddAttachment,
   onRemoveAttachment,
   availableTags = [],
+  tagColorMap = {},
   onAddTag,
   tagServiceMap = {},
   onSetTagService,
@@ -1032,6 +1018,7 @@ export function TaskDetailDialog({
       onAddAttachment={onAddAttachment}
       onRemoveAttachment={onRemoveAttachment}
       availableTags={availableTags}
+      tagColorMap={tagColorMap}
       onAddTag={onAddTag}
       tagServiceMap={tagServiceMap}
       onSetTagService={onSetTagService}

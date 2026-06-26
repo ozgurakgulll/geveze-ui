@@ -6,6 +6,7 @@ import { TagModel, TagDocument } from './schemas/tag.schema';
 export interface TagEntry {
   id: string;
   name: string;
+  color: string;
 }
 
 @Injectable()
@@ -20,8 +21,8 @@ export class TagsService {
     return docs.map(this.toEntry);
   }
 
-  async create(name: string): Promise<TagEntry> {
-    const doc = await this.tagModel.create({ name });
+  async create(name: string, color = '#6161FF'): Promise<TagEntry> {
+    const doc = await this.tagModel.create({ name, color });
     return this.toEntry(doc.toJSON() as Record<string, unknown>);
   }
 
@@ -30,12 +31,16 @@ export class TagsService {
     if (!result) throw new NotFoundException(`Tag ${id} bulunamadı`);
   }
 
-  async upsert(name: string): Promise<void> {
-    await this.tagModel.findOneAndUpdate({ name }, { name }, { upsert: true }).exec();
+  async upsert(name: string, color = '#6161FF'): Promise<void> {
+    await this.tagModel.findOneAndUpdate({ name }, { name, color }, { upsert: true }).exec();
   }
 
   private toEntry(doc: Record<string, unknown>): TagEntry {
-    const { _id, __v, name } = doc;
-    return { id: String((_id as { toString(): string }).toString()), name: String(name) };
+    const { _id, __v, name, color } = doc;
+    return {
+      id: String((_id as { toString(): string }).toString()),
+      name: String(name),
+      color: String(color ?? '#6161FF'),
+    };
   }
 }

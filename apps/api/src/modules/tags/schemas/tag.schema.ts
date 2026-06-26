@@ -7,6 +7,9 @@ export type TagDocument = HydratedDocument<TagModel>;
 export class TagModel {
   @Prop({ required: true, unique: true, trim: true })
   name: string;
+
+  @Prop({ required: true, default: '#6161FF', match: /^#[0-9A-Fa-f]{6}$/ })
+  color: string;
 }
 
 export const TagSchema = SchemaFactory.createForClass(TagModel);

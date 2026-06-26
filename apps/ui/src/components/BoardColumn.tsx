@@ -31,7 +31,6 @@ interface BoardColumnProps {
   onPortfolioFilterChange?: (id: string | null) => void;
   onTaskUpdate?: (taskId: string, updates: { assignee?: import('@/types').User | null; status?: import('@/types').TaskStatus; priority?: import('@/types').Priority }) => void;
   onAddAttachment?: (taskId: string, attachment: import('@/types').TaskAttachment) => void;
-  tagServiceMap?: Record<string, string>;
   onBulkDeleteTasks?: (taskIds: string[]) => void;
   onBulkReassignTasks?: (taskIds: string[], assigneeId: string) => void;
   onBulkArchiveTasks?: (taskIds: string[]) => void;
@@ -51,7 +50,6 @@ export function BoardColumn({
   onPortfolioFilterChange,
   onTaskUpdate,
   onAddAttachment,
-  tagServiceMap,
   onBulkDeleteTasks,
   onBulkReassignTasks,
   onBulkArchiveTasks,
@@ -251,7 +249,7 @@ export function BoardColumn({
                 users={users}
                 onTaskUpdate={onTaskUpdate}
                 onAddAttachment={onAddAttachment}
-                tagServiceMap={tagServiceMap}
+                
                 onBulkDeleteTasks={onBulkDeleteTasks}
                 onBulkReassignTasks={onBulkReassignTasks}
                 onBulkArchiveTasks={onBulkArchiveTasks}

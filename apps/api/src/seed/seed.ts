@@ -24,13 +24,15 @@ const seedUsers = [
   { name: 'Kazım Gün',          email: 'kazim@geveze.com',  initials: 'KG', color: '#A78BFA', title: 'Video Editör',            role: 'admin',   passwordHash: 'seed-hash' },
 ];
 
-const seedTags = [
-  'Analiz', 'Rapor', 'Tasarım', 'UI/UX', 'Backend', 'API', 'Pazarlama',
-  'Sosyal Medya', 'Mobile', 'iOS', 'Android', 'Email', 'İçerik', 'Planlama',
-  'SEO', 'Video', 'Podcast', 'Fotoğraf', 'Sunum', 'Strateji', 'Kampanya',
-  'Marka', 'Copy', 'YouTube', 'LinkedIn', 'TikTok', 'Pinterest', 'Webinar',
-  'Influencer', 'Onboarding', 'Reklam', 'UX', 'Rakip', 'Müşteri', 'Logo',
-  'Broşür', 'Newsletter', 'Onay',
+const seedTags: { name: string; color: string }[] = [
+  { name: 'Post',      color: '#3B82F6' },
+  { name: 'Story',     color: '#8B5CF6' },
+  { name: 'Video',     color: '#EF4444' },
+  { name: 'Tasarım',   color: '#F59E0B' },
+  { name: 'Kampanya',  color: '#10B981' },
+  { name: 'Analiz',    color: '#6366F1' },
+  { name: 'Müşteri',   color: '#EC4899' },
+  { name: 'Onay',      color: '#14B8A6' },
 ];
 
 const seedServiceTypes = [
@@ -198,10 +200,11 @@ async function seed() {
 
   // ── Tags ──
   console.log('🏷️   Seeding tags...');
-  for (const name of seedTags) {
-    await TagModelDb.findOneAndUpdate({ name }, { name }, { upsert: true });
+  await TagModelDb.deleteMany({});
+  for (const { name, color } of seedTags) {
+    await TagModelDb.findOneAndUpdate({ name }, { name, color }, { upsert: true });
   }
-  console.log(`   ✓ ${seedTags.length} tags`);
+  console.log(`   ✓ ${seedTags.length} labels`);
 
   // ── Service types ──
   console.log('🔧  Seeding service types...');

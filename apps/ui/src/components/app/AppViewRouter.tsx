@@ -88,7 +88,6 @@ export interface AppViewRouterProps {
   setSelectedPersonId: (id: string | null) => void;
   setCurrentView: (view: ViewType) => void;
   handleSelectPerson: (personId: string) => void;
-  tagServiceMap: Record<string, string>;
   handleAddAttachment: (taskId: string, attachment: TaskAttachment) => void;
 }
 
@@ -146,7 +145,6 @@ export function AppViewRouter(props: AppViewRouterProps) {
     setSelectedPersonId,
     setCurrentView,
     handleSelectPerson,
-    tagServiceMap,
     handleAddAttachment,
   } = props;
 
@@ -226,7 +224,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
           users={users}
           companies={portfolioCompaniesState}
           onAddAttachment={handleAddAttachment}
-          tagServiceMap={tagServiceMap}
+
           onBulkDeleteTasks={handleBulkDeleteTasks}
           onBulkReassignTasks={handleBulkReassignTasks}
           onBulkArchiveTasks={handleBulkArchiveTasks}
@@ -297,7 +295,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
           users={users}
           companies={portfolioCompaniesState}
           onAddAttachment={handleAddAttachment}
-          tagServiceMap={tagServiceMap}
+
           onBulkDeleteTasks={handleBulkDeleteTasks}
           onBulkReassignTasks={handleBulkReassignTasks}
           onBulkArchiveTasks={handleBulkArchiveTasks}

@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -50,6 +50,7 @@ import { TaskCommentsPanel } from '@/components/TaskCommentsPanel';
 import { DocumentUploadDialog } from '@/components/DocumentUploadDialog';
 import { getTaskProgress, getTaskProgressGradient } from '@/lib/taskProgress';
 import { isTaskOverdue } from '@/lib/taskOverdue';
+import { LabelChip } from '@/components/ui/LabelChip';
 
 export type TaskCardUpdatePayload = {
   assignee?: User | null;
@@ -64,7 +65,7 @@ interface TaskCardProps {
   users?: User[];
   onTaskUpdate?: (taskId: string, updates: TaskCardUpdatePayload) => void;
   onAddAttachment?: (taskId: string, attachment: TaskAttachment) => void;
-  tagServiceMap?: Record<string, string>;
+  tagColorMap?: Record<string, string>;
   onBulkDeleteTasks?: (taskIds: string[]) => void;
   onBulkReassignTasks?: (taskIds: string[], assigneeId: string) => void;
   onBulkArchiveTasks?: (taskIds: string[]) => void;
@@ -77,7 +78,7 @@ export function TaskCard({
   users = [],
   onTaskUpdate,
   onAddAttachment,
-  tagServiceMap,
+  tagColorMap = {},
   onBulkDeleteTasks,
   onBulkReassignTasks,
   onBulkArchiveTasks,
@@ -155,27 +156,16 @@ export function TaskCard({
     >
       {/* Top Actions */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex flex-wrap gap-1.5">
-          {task.tags.slice(0, 2).map((tag) => {
-            const serviceType = tagServiceMap?.[tag];
-            return (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 hover:bg-gray-200"
-                title={serviceType ? `${tag} → ${serviceType}` : undefined}
-              >
-                {tag}
-              </Badge>
-            );
-          })}
-          {task.tags.length > 2 && (
-            <Badge
-              variant="secondary"
-              className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600"
-            >
-              +{task.tags.length - 2}
-            </Badge>
+        <div className="flex flex-wrap gap-1">
+          {task.tags.slice(0, 3).map((tag) => (
+            <LabelChip
+              key={tag}
+              name={tag}
+              color={tagColorMap[tag] ?? '#6161FF'}
+            />
+          ))}
+          {task.tags.length > 3 && (
+            <span className="text-[10px] text-gray-400 self-center">+{task.tags.length - 3}</span>
           )}
         </div>
         {showTaskMenu ? (

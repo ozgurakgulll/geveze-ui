@@ -60,7 +60,6 @@ interface BoardViewProps {
   users: User[];
   companies: PortfolioCompany[];
   onAddAttachment?: (taskId: string, attachment: import('@/types').TaskAttachment) => void;
-  tagServiceMap?: Record<string, string>;
   onBulkDeleteTasks?: (taskIds: string[]) => void;
   onBulkReassignTasks?: (taskIds: string[], assigneeId: string) => void;
   onBulkArchiveTasks?: (taskIds: string[]) => void;
@@ -78,7 +77,6 @@ export function BoardView({
   users,
   companies,
   onAddAttachment,
-  tagServiceMap,
   onBulkDeleteTasks,
   onBulkReassignTasks,
   onBulkArchiveTasks,
@@ -356,7 +354,7 @@ export function BoardView({
                   onPortfolioFilterChange={(id) => updateColumnFilter(column.id, { portfolioId: id })}
                   onTaskUpdate={handleTaskUpdate}
                   onAddAttachment={onAddAttachment}
-                  tagServiceMap={tagServiceMap}
+
                   onBulkDeleteTasks={onBulkDeleteTasks}
                   onBulkReassignTasks={onBulkReassignTasks}
                   onBulkArchiveTasks={onBulkArchiveTasks}
