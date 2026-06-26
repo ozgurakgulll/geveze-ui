@@ -150,6 +150,7 @@ export interface User {
   title?: string;
   role: AppRole;
   permissions?: UserPermissions;
+  lastActiveAt?: string; // ISO — login zamanında güncellenir
 }
 
 export interface Task {

@@ -52,6 +52,9 @@ export class UserModel {
     canEditOthersTasks: boolean;
   };
 
+  @Prop({ type: Date })
+  lastActiveAt?: Date;
+
   /** select: false → API yanıtlarına dahil edilmez */
   @Prop({ select: false })
   passwordHash?: string;

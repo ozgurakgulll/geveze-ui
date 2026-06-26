@@ -215,8 +215,26 @@ export function PersonView({
     () => seededRandom(user.id.charCodeAt(0) * 1000 + user.id.length),
     [user.id],
   );
-  const isOnline = useMemo(() => rng() > 0.4, [rng]);
-  const lastSeenMinutes = useMemo(() => Math.floor(rng() * 120) + 5, [rng]);
+
+  // Gerçek lastActiveAt varsa kullan; yoksa mock
+  const { isOnline, lastSeenLabel } = useMemo(() => {
+    if (user.lastActiveAt) {
+      const diffMs = now.getTime() - new Date(user.lastActiveAt).getTime();
+      const diffMin = Math.floor(diffMs / 60_000);
+      const online = diffMin < 5;
+      let label = '';
+      if (!online) {
+        if (diffMin < 60) label = `${diffMin} dk önce görüldü`;
+        else if (diffMin < 1440) label = `${Math.floor(diffMin / 60)} sa önce görüldü`;
+        else label = `${Math.floor(diffMin / 1440)} gün önce görüldü`;
+      }
+      return { isOnline: online, lastSeenLabel: label };
+    }
+    // Fallback: mock (lastActiveAt henüz set edilmemiş)
+    const mockOnline = rng() > 0.4;
+    const mockMin = Math.floor(rng() * 120) + 5;
+    return { isOnline: mockOnline, lastSeenLabel: `${mockMin} dk önce görüldü` };
+  }, [user.lastActiveAt, now, rng]);
 
   const weeklyHours = useMemo(() => {
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -560,7 +578,7 @@ export function PersonView({
                   <WifiOff className="h-4 w-4 text-gray-400" />
                 )}
                 <span className="text-xs font-medium text-gray-800">
-                  {isOnline ? 'Çevrimiçi' : `${lastSeenMinutes} dk önce görüldü`}
+                  {isOnline ? 'Çevrimiçi' : lastSeenLabel}
                 </span>
               </div>
               <p className="text-[10px] text-gray-500">

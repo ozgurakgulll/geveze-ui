@@ -22,6 +22,8 @@ export class AuthService {
 
   login(user: User): { token: string; user: Pick<User, 'id' | 'name' | 'email' | 'color' | 'initials' | 'role'> } {
     const payload = { sub: user.id, email: user.email, role: user.role };
+    // fire-and-forget: hata varsa login akışını engelleme
+    void this.usersService.updateLastActive(user.id).catch(() => {});
     return {
       token: this.jwtService.sign(payload),
       user: {

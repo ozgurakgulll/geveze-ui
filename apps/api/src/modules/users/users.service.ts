@@ -91,6 +91,10 @@ export class UsersService {
     return this.toUser(doc);
   }
 
+  async updateLastActive(id: string): Promise<void> {
+    await this.userModel.findByIdAndUpdate(id, { lastActiveAt: new Date() }).exec();
+  }
+
   /** Seed için — varsa güncelle, yoksa oluştur */
   async upsert(dto: CreateUserDto & { _seedId?: string }): Promise<void> {
     const { password, ...rest } = dto;
