@@ -3,10 +3,13 @@ import {
   IsEmail,
   IsOptional,
   IsIn,
+  IsBoolean,
   MaxLength,
   MinLength,
   Matches,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateUserDto {
   @IsEmail()
@@ -36,6 +39,11 @@ export class CreateUserDto {
   @IsOptional()
   @IsIn(['admin', 'manager', 'member'])
   role?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  password?: string;
 }
 
 export class UpdateUserDto {
@@ -71,4 +79,31 @@ export class UpdateUserDto {
   @IsIn(['admin', 'manager', 'member'])
   role?: string;
   // passwordHash intentionally excluded — use PATCH /:id/password
+}
+
+export class PermissionsDto {
+  @IsBoolean() canViewAnalytics: boolean;
+  @IsBoolean() canViewArchive: boolean;
+  @IsBoolean() canViewTrash: boolean;
+  @IsBoolean() canManagePortfolio: boolean;
+  @IsBoolean() canCreateTasks: boolean;
+  @IsBoolean() canDeleteTasks: boolean;
+  @IsBoolean() canEditOthersTasks: boolean;
+}
+
+export class UpdateUserPermissionsDto {
+  @ValidateNested()
+  @Type(() => PermissionsDto)
+  permissions: PermissionsDto;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @MinLength(8)
+  newPassword: string;
+}
+
+export class UpdateUserRoleDto {
+  @IsIn(['admin', 'manager', 'member'])
+  role: string;
 }

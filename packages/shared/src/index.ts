@@ -21,7 +21,8 @@ export type ViewType =
   | 'person'
   | 'analytics'
   | 'archive'
-  | 'trash';
+  | 'trash'
+  | 'users';
 
 export type PortfolioStatus = 'active' | 'on-hold' | 'left';
 
@@ -109,6 +110,26 @@ export interface TableColumnSchemaItem {
 
 export type AppRole = 'admin' | 'manager' | 'member';
 
+export interface UserPermissions {
+  canViewAnalytics: boolean;
+  canViewArchive: boolean;
+  canViewTrash: boolean;
+  canManagePortfolio: boolean;
+  canCreateTasks: boolean;
+  canDeleteTasks: boolean;
+  canEditOthersTasks: boolean;
+}
+
+export const DEFAULT_MEMBER_PERMISSIONS: UserPermissions = {
+  canViewAnalytics: false,
+  canViewArchive: true,
+  canViewTrash: true,
+  canManagePortfolio: false,
+  canCreateTasks: true,
+  canDeleteTasks: false,
+  canEditOthersTasks: false,
+};
+
 export interface User {
   id: string;
   name: string;
@@ -118,6 +139,7 @@ export interface User {
   color: string;
   title?: string;
   role: AppRole;
+  permissions?: UserPermissions;
 }
 
 export interface Task {

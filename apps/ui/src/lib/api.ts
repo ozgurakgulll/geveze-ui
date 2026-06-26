@@ -75,6 +75,39 @@ export function parseApiTask(raw: Record<string, unknown>, userList: User[]): Ta
 
 export const getUsers = (): Promise<User[]> => request<User[]>('/users');
 
+export const createUser = (data: {
+  email: string; name: string; initials: string; color: string;
+  title?: string; role?: string; password: string;
+}): Promise<User> =>
+  request<User>('/users', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateUser = (id: string, data: Partial<User>): Promise<User> =>
+  request<User>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+export const deleteUser = (id: string): Promise<void> =>
+  request<void>(`/users/${id}`, { method: 'DELETE' });
+
+export const updateUserPermissions = (
+  id: string,
+  permissions: import('@/types').UserPermissions,
+): Promise<User> =>
+  request<User>(`/users/${id}/permissions`, {
+    method: 'PATCH',
+    body: JSON.stringify({ permissions }),
+  });
+
+export const resetUserPassword = (id: string, newPassword: string): Promise<void> =>
+  request<void>(`/users/${id}/password`, {
+    method: 'PATCH',
+    body: JSON.stringify({ newPassword }),
+  });
+
+export const updateUserRole = (id: string, role: string): Promise<User> =>
+  request<User>(`/users/${id}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+
 // ─── Tasks ───────────────────────────────────────────────────────────────────
 
 export async function getTasks(

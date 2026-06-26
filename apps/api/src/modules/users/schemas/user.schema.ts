@@ -26,6 +26,32 @@ export class UserModel {
   @Prop({ required: true, default: 'member', enum: ['admin', 'manager', 'member'] })
   role: string;
 
+  @Prop({
+    type: {
+      canViewAnalytics:   { type: Boolean, default: false },
+      canViewArchive:     { type: Boolean, default: true },
+      canViewTrash:       { type: Boolean, default: true },
+      canManagePortfolio: { type: Boolean, default: false },
+      canCreateTasks:     { type: Boolean, default: true },
+      canDeleteTasks:     { type: Boolean, default: false },
+      canEditOthersTasks: { type: Boolean, default: false },
+    },
+    default: () => ({
+      canViewAnalytics: false, canViewArchive: true, canViewTrash: true,
+      canManagePortfolio: false, canCreateTasks: true, canDeleteTasks: false,
+      canEditOthersTasks: false,
+    }),
+  })
+  permissions: {
+    canViewAnalytics: boolean;
+    canViewArchive: boolean;
+    canViewTrash: boolean;
+    canManagePortfolio: boolean;
+    canCreateTasks: boolean;
+    canDeleteTasks: boolean;
+    canEditOthersTasks: boolean;
+  };
+
   /** select: false → API yanıtlarına dahil edilmez */
   @Prop({ select: false })
   passwordHash?: string;

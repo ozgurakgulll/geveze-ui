@@ -27,6 +27,7 @@ import {
   Trash2,
   Archive,
   LogOut,
+  Users,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ import { currentProject } from '@/data/mockData';
 import { useUsers } from '@/contexts/UsersContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ViewType } from '@/types';
+import { DEFAULT_MEMBER_PERMISSIONS } from '@/types';
 import logo from '@/assets/geveze-logo.png';
 
 interface SidebarProps {
@@ -66,6 +68,13 @@ export function Sidebar({
   const { user: authUser } = useAuth();
   const isManager = authUser?.role === 'admin' || authUser?.role === 'manager';
   const effectiveCollapsed = embedded ? false : isCollapsed;
+
+  // Derive permissions for current user
+  const currentUserPerms = isManager
+    ? null
+    : users.find(u => u.id === authUser?.id)?.permissions ?? DEFAULT_MEMBER_PERMISSIONS;
+  const canViewArchive = isManager || (currentUserPerms?.canViewArchive ?? true);
+  const canViewTrash   = isManager || (currentUserPerms?.canViewTrash ?? true);
   const [isEkipExpanded, setIsEkipExpanded] = useState(true);
 
   const menuItems = [
@@ -185,34 +194,54 @@ export function Sidebar({
               {!effectiveCollapsed && <span>{item.label}</span>}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => handleViewChange('archive')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              currentView === 'archive'
-                ? 'bg-[#E5E7FF] text-[#6161FF]'
-                : 'text-gray-700 hover:bg-gray-100',
-              effectiveCollapsed && 'justify-center px-2'
-            )}
-          >
-            <Archive className="h-5 w-5 flex-shrink-0" />
-            {!effectiveCollapsed && <span>Arşiv</span>}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleViewChange('trash')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              currentView === 'trash'
-                ? 'bg-[#E5E7FF] text-[#6161FF]'
-                : 'text-gray-500 hover:bg-gray-100',
-              effectiveCollapsed && 'justify-center px-2'
-            )}
-          >
-            <Trash2 className="h-5 w-5 flex-shrink-0" />
-            {!effectiveCollapsed && <span>Son Silinenler</span>}
-          </button>
+          {canViewArchive && (
+            <button
+              type="button"
+              onClick={() => handleViewChange('archive')}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                currentView === 'archive'
+                  ? 'bg-[#E5E7FF] text-[#6161FF]'
+                  : 'text-gray-700 hover:bg-gray-100',
+                effectiveCollapsed && 'justify-center px-2'
+              )}
+            >
+              <Archive className="h-5 w-5 flex-shrink-0" />
+              {!effectiveCollapsed && <span>Arşiv</span>}
+            </button>
+          )}
+          {canViewTrash && (
+            <button
+              type="button"
+              onClick={() => handleViewChange('trash')}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                currentView === 'trash'
+                  ? 'bg-[#E5E7FF] text-[#6161FF]'
+                  : 'text-gray-500 hover:bg-gray-100',
+                effectiveCollapsed && 'justify-center px-2'
+              )}
+            >
+              <Trash2 className="h-5 w-5 flex-shrink-0" />
+              {!effectiveCollapsed && <span>Son Silinenler</span>}
+            </button>
+          )}
+          {isManager && (
+            <button
+              type="button"
+              onClick={() => handleViewChange('users')}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                currentView === 'users'
+                  ? 'bg-[#E5E7FF] text-[#6161FF]'
+                  : 'text-gray-700 hover:bg-gray-100',
+                effectiveCollapsed && 'justify-center px-2'
+              )}
+            >
+              <Users className="h-5 w-5 flex-shrink-0" />
+              {!effectiveCollapsed && <span>Kullanıcılar</span>}
+            </button>
+          )}
         </div>
 
         <Separator className="flex-shrink-0 my-2 mx-4" />

@@ -8,10 +8,12 @@ import { AddTaskDialog } from '@/components/AddTaskDialog';
 import { TaskDetailDialog } from '@/components/TaskDetailDialog';
 import { AppViewRouter } from '@/components/app/AppViewRouter';
 import { RecentlyDeletedPage } from '@/components/RecentlyDeletedPage';
+import { UsersManagementView } from '@/components/users/UsersManagementView';
 import { LoginPage } from '@/components/LoginPage';
 import { useAuth } from '@/contexts/AuthContext';
 import type {
   ActivityLogItem,
+  AppRole,
   CustomColumnType,
   MonthlyContentQuota,
   PortfolioCompany,
@@ -25,8 +27,10 @@ import type {
   TaskAttachment,
   TaskStatus,
   User,
+  UserPermissions,
   ViewType,
 } from '@/types';
+import { DEFAULT_MEMBER_PERMISSIONS } from '@/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { priorityLabels, statusLabels } from '@/data/mockData';
@@ -37,7 +41,6 @@ import { UsersProvider } from '@/contexts/UsersContext';
 import {
   OLD_CUSTOM_COLUMNS_KEY,
   TABLE_SCHEMA_STORAGE_KEY,
-  TAG_SERVICE_MAP_KEY,
   VIEW_STORAGE_KEY,
 } from '@/lib/gevezeStorageKeys';
 
@@ -344,7 +347,8 @@ const isViewType = (value: unknown): value is ViewType => {
     value === 'person' ||
     value === 'analytics' ||
     value === 'archive' ||
-    value === 'trash'
+    value === 'trash' ||
+    value === 'users'
   );
 };
 
@@ -352,35 +356,6 @@ const loadInitialView = (): ViewType => {
   if (typeof window === 'undefined') return 'dashboard';
   const saved = window.localStorage.getItem(VIEW_STORAGE_KEY);
   return isViewType(saved) ? saved : 'dashboard';
-};
-
-const DEFAULT_TAG_SERVICE_MAP: Record<string, string> = {
-  Post: 'Sosyal Medya Yönetimi',
-  Story: 'Sosyal Medya Yönetimi',
-  Reels: 'Sosyal Medya Yönetimi',
-  'Tanıtım Filmi': 'Video Prodüksiyon',
-  '3D': 'Video Prodüksiyon',
-  'Motion Graphic': 'Video Prodüksiyon',
-  'Web Site': 'Web Geliştirme',
-};
-
-const loadTagServiceMap = (): Record<string, string> => {
-  if (typeof window === 'undefined') return { ...DEFAULT_TAG_SERVICE_MAP };
-  try {
-    const raw = window.localStorage.getItem(TAG_SERVICE_MAP_KEY);
-    if (!raw) return { ...DEFAULT_TAG_SERVICE_MAP };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_TAG_SERVICE_MAP };
-    const result: Record<string, string> = {};
-    for (const [k, v] of Object.entries(parsed)) {
-      if (typeof k === 'string' && typeof v === 'string' && k.trim() && v.trim()) {
-        result[k] = v;
-      }
-    }
-    return result;
-  } catch {
-    return { ...DEFAULT_TAG_SERVICE_MAP };
-  }
 };
 
 // ─── Loading screen ──────────────────────────────────────────────────────────
@@ -425,8 +400,6 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const [globalOverdueOnly, setGlobalOverdueOnly] = useState(false);
   const [globalSortBy, setGlobalSortBy] = useState<'dueDate' | 'priority' | 'title'>('dueDate');
   const [globalSortDir, setGlobalSortDir] = useState<'asc' | 'desc'>('asc');
-  const [tagServiceMap, setTagServiceMap] = useState<Record<string, string>>(loadTagServiceMap);
-
   // ── Server state (API) ──
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -447,7 +420,24 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const appRole = authUser?.role ?? 'member';
   const isManager = appRole === 'admin' || appRole === 'manager';
   const currentUserRole: PortfolioRole = isManager ? 'manager' : 'editor';
-  const canManagePortfolio = isManager;
+
+  // Per-user permission derivation — managers/admins always have full access
+  const currentUserPerms = useMemo(() => {
+    if (isManager) return null; // always full access
+    return users.find(u => u.id === authUser?.id)?.permissions ?? DEFAULT_MEMBER_PERMISSIONS;
+  }, [isManager, users, authUser]);
+
+  const effectivePerms = useMemo(() => ({
+    canViewAnalytics:    isManager || (currentUserPerms?.canViewAnalytics ?? false),
+    canViewArchive:      isManager || (currentUserPerms?.canViewArchive ?? true),
+    canViewTrash:        isManager || (currentUserPerms?.canViewTrash ?? true),
+    canManagePortfolio:  isManager || (currentUserPerms?.canManagePortfolio ?? false),
+    canCreateTasks:      isManager || (currentUserPerms?.canCreateTasks ?? true),
+    canDeleteTasks:      isManager || (currentUserPerms?.canDeleteTasks ?? false),
+    canEditOthersTasks:  isManager || (currentUserPerms?.canEditOthersTasks ?? false),
+  }), [isManager, currentUserPerms]);
+
+  const canManagePortfolio = effectivePerms.canManagePortfolio;
 
   // ── Initial data fetch ──
   useEffect(() => {
@@ -464,10 +454,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         setPortfolioCompaniesState(
           fetchedPortfolio.map((c) => normalizePortfolioCompany(c) ?? c)
         );
-        // member sadece kendine atanan görevleri görür (backend de filtreler, bu ek güvence)
-        const taskParams = appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined;
         const [fetchedTasks, fetchedDeleted] = await Promise.all([
-          api.getTasks(fetchedUsers, taskParams),
+          api.getTasks(fetchedUsers),
           api.getDeletedTasks(fetchedUsers),
         ]);
         setTasks(fetchedTasks);
@@ -489,10 +477,6 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   useEffect(() => {
     window.localStorage.setItem(TABLE_SCHEMA_STORAGE_KEY, JSON.stringify(tableColumnSchema));
   }, [tableColumnSchema]);
-
-  useEffect(() => {
-    window.localStorage.setItem(TAG_SERVICE_MAP_KEY, JSON.stringify(tagServiceMap));
-  }, [tagServiceMap]);
 
   // ── Derived / filtered tasks ──
   const portfolioTaskOptions = useMemo(
@@ -585,7 +569,6 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
     if (!window.confirm('Tüm yerel tercihler sıfırlanacak ve sayfa yenilenecek. Emin misiniz?')) return;
     window.localStorage.removeItem(VIEW_STORAGE_KEY);
     window.localStorage.removeItem(TABLE_SCHEMA_STORAGE_KEY);
-    window.localStorage.removeItem(TAG_SERVICE_MAP_KEY);
     window.location.reload();
   }, []);
 
@@ -695,15 +678,41 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
     [tagEntries]
   );
 
-  const handleSetTagService = useCallback((tag: string, serviceType: string | null) => {
-    setTagServiceMap((prev) => {
-      if (!serviceType) {
-        const next = { ...prev };
-        delete next[tag];
-        return next;
-      }
-      return { ...prev, [tag]: serviceType };
-    });
+  // ── User management handlers ──────────────────────────────────────────────
+  const handleCreateUser = useCallback(async (data: {
+    email: string; name: string; initials: string; color: string;
+    title?: string; role: string; password: string;
+  }) => {
+    const created = await api.createUser(data);
+    setUsers(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name, 'tr')));
+    toast.success(`${created.name} oluşturuldu`);
+  }, []);
+
+  const handleUpdateUser = useCallback(async (id: string, data: Partial<User>) => {
+    const updated = await api.updateUser(id, data);
+    setUsers(prev => prev.map(u => u.id === id ? updated : u));
+    toast.success('Kullanıcı güncellendi');
+  }, []);
+
+  const handleDeleteUser = useCallback(async (id: string) => {
+    await api.deleteUser(id);
+    setUsers(prev => prev.filter(u => u.id !== id));
+  }, []);
+
+  const handleUpdateUserPermissions = useCallback(async (id: string, permissions: UserPermissions) => {
+    const updated = await api.updateUserPermissions(id, permissions);
+    setUsers(prev => prev.map(u => u.id === id ? updated : u));
+    toast.success('İzinler güncellendi');
+  }, []);
+
+  const handleResetUserPassword = useCallback(async (id: string, newPassword: string) => {
+    await api.resetUserPassword(id, newPassword);
+  }, []);
+
+  const handleUpdateUserRole = useCallback(async (id: string, role: AppRole) => {
+    const updated = await api.updateUserRole(id, role);
+    setUsers(prev => prev.map(u => u.id === id ? updated : u));
+    toast.success('Rol güncellendi');
   }, []);
 
   const handleSelectPortfolioCompany = useCallback((companyId: string) => {
@@ -994,7 +1003,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       toast.success(ids.length === 1 ? 'Görev son silinenler klasörüne taşındı' : `${ids.length} görev son silinenler klasörüne taşındı`);
       api.bulkDeleteTasks(ids).catch(() => {
         toast.error('Silme işlemi kısmen başarısız oldu');
-        api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
+        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
       });
     },
     [tasks, users, appRole, authUser]
@@ -1013,7 +1022,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       toast.success(ids.length === 1 ? 'Görev devredildi' : `${ids.length} görev devredildi`);
       api.bulkReassignTasks(ids, assigneeId, assignee?.name).catch(() => {
         toast.error('Devret işlemi kısmen başarısız oldu');
-        api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
+        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
       });
     },
     [users]
@@ -1030,7 +1039,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       toast.success(ids.length === 1 ? 'Görev arşivlendi' : `${ids.length} görev arşivlendi`);
       api.bulkArchiveTasks(ids).catch(() => {
         toast.error('Arşivleme kısmen başarısız oldu');
-        api.getTasks(users, appRole === 'member' && authUser ? { assigneeId: authUser.id } : undefined).then(setTasks).catch(() => { /* silent */ });
+        api.getTasks(users).then(setTasks).catch(() => { /* silent */ });
       });
     },
     [users]
@@ -1259,6 +1268,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
           sortDir={globalSortDir}
           onSortDirChange={setGlobalSortDir}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
+          canAddTask={effectivePerms.canCreateTasks && currentView !== 'users'}
         />
 
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-50/50">
@@ -1269,6 +1279,16 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               onPermanentDelete={handlePermanentDeleteTask}
               onBulkRestore={handleBulkRestoreFromTrash}
               onBulkPermanentDelete={handleBulkPermanentDelete}
+            />
+          ) : currentView === 'users' ? (
+            <UsersManagementView
+              currentUser={authUser}
+              onCreateUser={handleCreateUser}
+              onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
+              onUpdateUserPermissions={handleUpdateUserPermissions}
+              onResetPassword={handleResetUserPassword}
+              onUpdateUserRole={handleUpdateUserRole}
             />
           ) : (
           <AppViewRouter

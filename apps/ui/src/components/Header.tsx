@@ -34,6 +34,7 @@ interface HeaderProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
   onAddTask: () => void;
+  canAddTask?: boolean;
   onOpenMenu?: () => void;
   searchQuery?: string;
   onSearchChange?: (value: string) => void;
@@ -53,6 +54,7 @@ export function Header({
   currentView,
   onViewChange,
   onAddTask,
+  canAddTask = true,
   onOpenMenu,
   searchQuery = '',
   onSearchChange,
@@ -79,6 +81,7 @@ export function Header({
     analytics: 'Analitik',
     archive: 'Arşiv',
     trash: 'Son Silinenler',
+    users: 'Kullanıcı Yönetimi',
   };
 
   return (
@@ -205,7 +208,7 @@ export function Header({
         {/* View Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 flex-shrink-0">
           {(Object.keys(viewLabels) as ViewType[])
-            .filter((view) => view !== 'person' && view !== 'analytics' && view !== 'portfolio')
+            .filter((view) => view !== 'person' && view !== 'analytics' && view !== 'portfolio' && view !== 'users')
             .map((view) => (
             <button
               key={view}
@@ -403,14 +406,16 @@ export function Header({
           )}
 
           {/* Add Task Button */}
-          <Button
-            size="sm"
-            className="gap-2 bg-[#6161FF] hover:bg-[#5050E0] text-white min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
-            onClick={onAddTask}
-          >
-            <Plus className="h-4 w-4" />
-            <span>Yeni Görev</span>
-          </Button>
+          {canAddTask && (
+            <Button
+              size="sm"
+              className="gap-2 bg-[#6161FF] hover:bg-[#5050E0] text-white min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+              onClick={onAddTask}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Yeni Görev</span>
+            </Button>
+          )}
         </div>
       </div>
     </header>

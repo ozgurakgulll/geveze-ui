@@ -64,7 +64,7 @@ export class TasksController {
     @Query('assigneeId') assigneeId?: string,
     @Query('status') status?: string,
   ): Promise<Task[]> {
-    const effectiveAssigneeId = req.user.role === 'member' ? req.user.id : assigneeId;
+    const effectiveAssigneeId = assigneeId;
     const filters: TaskFilters = {
       ...(archived !== undefined ? { archived: archived === 'true' } : {}),
       ...(effectiveAssigneeId ? { assigneeId: effectiveAssigneeId } : {}),
