@@ -3,10 +3,13 @@ import { HydratedDocument } from 'mongoose';
 
 export type SettingDocument = HydratedDocument<SettingModel>;
 
-/** key-value ayar deposu: tableColumnSchema, tagServiceMap vb. */
+/** key-value ayar deposu: tableColumnSchema, tagServiceMap, companyName vb. */
 @Schema({ timestamps: true, collection: 'settings' })
 export class SettingModel {
-  @Prop({ required: true, unique: true })
+  @Prop({ type: String })
+  workspaceId?: string;
+
+  @Prop({ required: true })
   key: string;
 
   @Prop({ type: Object })
@@ -14,6 +17,8 @@ export class SettingModel {
 }
 
 export const SettingSchema = SchemaFactory.createForClass(SettingModel);
+
+SettingSchema.index({ workspaceId: 1, key: 1 }, { unique: true });
 
 SettingSchema.set('toJSON', {
   virtuals: true,

@@ -10,36 +10,42 @@ export class SettingsService {
     private readonly model: Model<SettingDocument>,
   ) {}
 
-  async getAll(): Promise<Record<string, unknown>> {
-    const docs = await this.model.find().lean().exec();
+  async getAll(workspaceId?: string): Promise<Record<string, unknown>> {
+    const query = workspaceId ? { workspaceId } : { workspaceId: { $exists: false } };
+    const docs = await this.model.find(query).lean().exec();
     return Object.fromEntries(docs.map(d => [String(d['key']), d['value']]));
   }
 
-  async get(key: string): Promise<unknown> {
-    const doc = await this.model.findOne({ key }).lean().exec();
+  async get(key: string, workspaceId?: string): Promise<unknown> {
+    const query = workspaceId ? { key, workspaceId } : { key, workspaceId: { $exists: false } };
+    const doc = await this.model.findOne(query).lean().exec();
     return doc ? doc['value'] : null;
   }
 
-  async set(key: string, value: unknown): Promise<void> {
+  async set(key: string, value: unknown, workspaceId?: string): Promise<void> {
+    const filter = workspaceId ? { key, workspaceId } : { key, workspaceId: { $exists: false } };
     await this.model.findOneAndUpdate(
-      { key },
-      { key, value },
+      filter,
+      { key, value, ...(workspaceId && { workspaceId }) },
       { upsert: true, new: true },
     ).exec();
   }
 
-  async setMany(entries: Record<string, unknown>): Promise<void> {
+  async setMany(entries: Record<string, unknown>, workspaceId?: string): Promise<void> {
     const ops = Object.entries(entries).map(([key, value]) => ({
       updateOne: {
-        filter: { key },
-        update: { $set: { key, value } },
+        filter: workspaceId
+          ? { key, workspaceId }
+          : { key, workspaceId: { $exists: false } },
+        update: { $set: { key, value, ...(workspaceId && { workspaceId }) } },
         upsert: true,
       },
     }));
     await this.model.bulkWrite(ops);
   }
 
-  async remove(key: string): Promise<void> {
-    await this.model.findOneAndDelete({ key }).exec();
+  async remove(key: string, workspaceId?: string): Promise<void> {
+    const query = workspaceId ? { key, workspaceId } : { key, workspaceId: { $exists: false } };
+    await this.model.findOneAndDelete(query).exec();
   }
 }

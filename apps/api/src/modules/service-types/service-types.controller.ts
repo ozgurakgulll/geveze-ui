@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete, Param, Body, HttpCode, HttpStatus,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ServiceTypesService, ServiceTypeEntry } from './service-types.service';
 import { IsString, MinLength } from 'class-validator';
@@ -15,13 +15,16 @@ export class ServiceTypesController {
   constructor(private readonly service: ServiceTypesService) {}
 
   @Get()
-  findAll(): Promise<ServiceTypeEntry[]> {
-    return this.service.findAll();
+  findAll(@Query('workspaceId') workspaceId?: string): Promise<ServiceTypeEntry[]> {
+    return this.service.findAll(workspaceId);
   }
 
   @Post()
-  create(@Body() dto: CreateServiceTypeDto): Promise<ServiceTypeEntry> {
-    return this.service.create(dto.name);
+  create(
+    @Body() dto: CreateServiceTypeDto,
+    @Query('workspaceId') workspaceId?: string,
+  ): Promise<ServiceTypeEntry> {
+    return this.service.create(dto.name, workspaceId);
   }
 
   @Patch(':id')

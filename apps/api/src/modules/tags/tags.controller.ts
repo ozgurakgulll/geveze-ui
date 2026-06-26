@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete, Param, Body, HttpCode, HttpStatus,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { TagsService, TagEntry } from './tags.service';
 import { IsString, MinLength, IsOptional } from 'class-validator';
@@ -31,13 +31,16 @@ export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
   @Get()
-  findAll(): Promise<TagEntry[]> {
-    return this.tagsService.findAll();
+  findAll(@Query('workspaceId') workspaceId?: string): Promise<TagEntry[]> {
+    return this.tagsService.findAll(workspaceId);
   }
 
   @Post()
-  create(@Body() dto: CreateTagDto): Promise<TagEntry> {
-    return this.tagsService.create(dto.name, dto.color);
+  create(
+    @Body() dto: CreateTagDto,
+    @Query('workspaceId') workspaceId?: string,
+  ): Promise<TagEntry> {
+    return this.tagsService.create(dto.name, dto.color, workspaceId);
   }
 
   @Patch(':id')

@@ -15,13 +15,14 @@ export class ServiceTypesService {
     private readonly model: Model<ServiceTypeDocument>,
   ) {}
 
-  async findAll(): Promise<ServiceTypeEntry[]> {
-    const docs = await this.model.find().sort({ name: 1 }).lean().exec();
+  async findAll(workspaceId?: string): Promise<ServiceTypeEntry[]> {
+    const query = workspaceId ? { workspaceId } : {};
+    const docs = await this.model.find(query).sort({ name: 1 }).lean().exec();
     return docs.map(this.toEntry);
   }
 
-  async create(name: string): Promise<ServiceTypeEntry> {
-    const doc = await this.model.create({ name });
+  async create(name: string, workspaceId?: string): Promise<ServiceTypeEntry> {
+    const doc = await this.model.create({ name, workspaceId });
     return this.toEntry(doc.toJSON() as Record<string, unknown>);
   }
 

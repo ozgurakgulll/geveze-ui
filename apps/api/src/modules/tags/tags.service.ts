@@ -16,13 +16,14 @@ export class TagsService {
     private readonly tagModel: Model<TagDocument>,
   ) {}
 
-  async findAll(): Promise<TagEntry[]> {
-    const docs = await this.tagModel.find().sort({ name: 1 }).lean().exec();
+  async findAll(workspaceId?: string): Promise<TagEntry[]> {
+    const query = workspaceId ? { workspaceId } : {};
+    const docs = await this.tagModel.find(query).sort({ name: 1 }).lean().exec();
     return docs.map(this.toEntry);
   }
 
-  async create(name: string, color = '#6161FF'): Promise<TagEntry> {
-    const doc = await this.tagModel.create({ name, color });
+  async create(name: string, color = '#6161FF', workspaceId?: string): Promise<TagEntry> {
+    const doc = await this.tagModel.create({ name, color, workspaceId });
     return this.toEntry(doc.toJSON() as Record<string, unknown>);
   }
 

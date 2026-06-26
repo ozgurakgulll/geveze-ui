@@ -7,6 +7,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -19,8 +20,8 @@ export class PortfolioController {
   constructor(private readonly portfolioService: PortfolioService) {}
 
   @Get()
-  findAll(): Promise<PortfolioCompany[]> {
-    return this.portfolioService.findAll();
+  findAll(@Query('workspaceId') workspaceId?: string): Promise<PortfolioCompany[]> {
+    return this.portfolioService.findAll(workspaceId);
   }
 
   @Get(':id')

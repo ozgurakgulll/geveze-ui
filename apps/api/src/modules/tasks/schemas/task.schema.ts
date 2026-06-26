@@ -26,6 +26,9 @@ export class TaskModel {
   })
   priority: Priority;
 
+  @Prop({ type: String, index: true })
+  workspaceId?: string;
+
   @Prop({ type: String })
   assigneeId?: string;
 
@@ -107,12 +110,12 @@ export class TaskModel {
 
 export const TaskSchema = SchemaFactory.createForClass(TaskModel);
 
-TaskSchema.index({ status: 1 });
-TaskSchema.index({ assigneeId: 1 });
-TaskSchema.index({ archived: 1 });
+TaskSchema.index({ workspaceId: 1, status: 1 });
+TaskSchema.index({ workspaceId: 1, assigneeId: 1 });
+TaskSchema.index({ workspaceId: 1, deletedAt: 1 });
+TaskSchema.index({ workspaceId: 1, archived: 1 });
 TaskSchema.index({ dueDate: 1 });
 TaskSchema.index({ portfolioCompanyId: 1 });
-TaskSchema.index({ deletedAt: 1 });
 
 TaskSchema.set('toJSON', {
   virtuals: true,

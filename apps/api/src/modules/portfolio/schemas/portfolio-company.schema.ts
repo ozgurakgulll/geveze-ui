@@ -14,6 +14,9 @@ export type PortfolioCompanyDocument = HydratedDocument<PortfolioCompanyModel>;
 
 @Schema({ timestamps: true, collection: 'portfolio_companies' })
 export class PortfolioCompanyModel {
+  @Prop({ type: String, index: true })
+  workspaceId?: string;
+
   @Prop({ required: true, trim: true })
   name: string;
 
@@ -63,7 +66,7 @@ export class PortfolioCompanyModel {
 
 export const PortfolioCompanySchema = SchemaFactory.createForClass(PortfolioCompanyModel);
 
-PortfolioCompanySchema.index({ status: 1 });
+PortfolioCompanySchema.index({ workspaceId: 1, status: 1 });
 PortfolioCompanySchema.index({ name: 'text' });
 
 PortfolioCompanySchema.set('toJSON', {

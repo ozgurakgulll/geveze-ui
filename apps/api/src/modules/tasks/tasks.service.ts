@@ -7,6 +7,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import type { Task, ActivityLogItem } from '@geveze/shared';
 
 export interface TaskFilters {
+  workspaceId?: string;
   archived?: boolean;
   assigneeId?: string;
   status?: string;
@@ -27,6 +28,8 @@ export class TasksService {
 
   async findAll(filters: TaskFilters = {}): Promise<Task[]> {
     const query: FilterQuery<TaskDocument> = { deletedAt: null };
+
+    if (filters.workspaceId) query['workspaceId'] = filters.workspaceId;
 
     if (filters.archived !== undefined) {
       query['archived'] = filters.archived;

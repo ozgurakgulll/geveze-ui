@@ -68,6 +68,7 @@ export class TasksController {
   @Get()
   findAll(
     @Request() req: { user: { id: string; role: AppRole } },
+    @Query('workspaceId') workspaceId?: string,
     @Query('archived') archived?: string,
     @Query('assigneeId') assigneeId?: string,
     @Query('status') status?: string,
@@ -80,6 +81,7 @@ export class TasksController {
   ): Promise<Task[]> {
     void req;
     const filters: TaskFilters = {
+      ...(workspaceId ? { workspaceId } : {}),
       ...(archived !== undefined ? { archived: archived === 'true' } : {}),
       ...(assigneeId ? { assigneeId } : {}),
       ...(status ? { status } : {}),

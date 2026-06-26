@@ -5,11 +5,16 @@ export type ServiceTypeDocument = HydratedDocument<ServiceTypeModel>;
 
 @Schema({ timestamps: true, collection: 'service_types' })
 export class ServiceTypeModel {
-  @Prop({ required: true, unique: true, trim: true })
+  @Prop({ type: String })
+  workspaceId?: string;
+
+  @Prop({ required: true, trim: true })
   name: string;
 }
 
 export const ServiceTypeSchema = SchemaFactory.createForClass(ServiceTypeModel);
+
+ServiceTypeSchema.index({ workspaceId: 1, name: 1 }, { unique: true });
 
 ServiceTypeSchema.set('toJSON', {
   virtuals: true,
