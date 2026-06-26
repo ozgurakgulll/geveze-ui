@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -44,5 +45,45 @@ export class PortfolioController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {
     return this.portfolioService.remove(id);
+  }
+
+  @Patch(':id/contacts')
+  updateContacts(
+    @Param('id') id: string,
+    @Body() body: { contacts: import('@geveze/shared').CompanyContact[] },
+  ): Promise<PortfolioCompany> {
+    return this.portfolioService.updateField(id, 'contacts', body.contacts);
+  }
+
+  @Patch(':id/social-media')
+  updateSocialMedia(
+    @Param('id') id: string,
+    @Body() body: { accounts: import('@geveze/shared').SocialMediaAccount[] },
+  ): Promise<PortfolioCompany> {
+    return this.portfolioService.updateField(id, 'socialMediaAccounts', body.accounts);
+  }
+
+  @Patch(':id/brand')
+  updateBrand(
+    @Param('id') id: string,
+    @Body() body: { brandIdentity: import('@geveze/shared').BrandIdentity },
+  ): Promise<PortfolioCompany> {
+    return this.portfolioService.updateField(id, 'brandIdentity', body.brandIdentity);
+  }
+
+  @Patch(':id/calendar')
+  updateCalendar(
+    @Param('id') id: string,
+    @Body() body: { calendar: import('@geveze/shared').ContentCalendarItem[] },
+  ): Promise<PortfolioCompany> {
+    return this.portfolioService.updateField(id, 'monthlyContentCalendar', body.calendar);
+  }
+
+  @Patch(':id/notes')
+  updateNotes(
+    @Param('id') id: string,
+    @Body() body: { notes: string[] },
+  ): Promise<PortfolioCompany> {
+    return this.portfolioService.updateField(id, 'notes', body.notes);
   }
 }

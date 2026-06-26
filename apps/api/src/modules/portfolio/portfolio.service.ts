@@ -63,6 +63,22 @@ export class PortfolioService {
     if (!result) throw new NotFoundException(`Portfolio company ${id} bulunamadı`);
   }
 
+  async updateField(id: string, field: string, value: unknown): Promise<PortfolioCompany> {
+    const doc = await this.model
+      .findByIdAndUpdate(
+        id,
+        {
+          [field]: value,
+          $push: { activityLog: this.makeLog(`${field} güncellendi`, '') },
+        },
+        { new: true },
+      )
+      .lean()
+      .exec();
+    if (!doc) throw new NotFoundException(`Portfolio company ${id} bulunamadı`);
+    return this.toCompany(doc);
+  }
+
   async upsert(data: Partial<PortfolioCompany>): Promise<void> {
     await this.model
       .findOneAndUpdate({ name: data.name }, data, { upsert: true, new: true })

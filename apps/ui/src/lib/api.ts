@@ -3,6 +3,10 @@ import type {
   TaskComment,
   User,
   PortfolioCompany,
+  CompanyContact,
+  SocialMediaAccount,
+  BrandIdentity,
+  ContentCalendarItem,
   TaskStatus,
   Priority,
   ActivityLogItem,
@@ -267,6 +271,36 @@ export const updatePortfolioCompany = (id: string, data: unknown): Promise<Portf
 
 export const deletePortfolioCompany = (id: string): Promise<void> =>
   request<void>(`/portfolio/${id}`, { method: 'DELETE' });
+
+export const updatePortfolioContacts = (id: string, contacts: CompanyContact[]): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>(`/portfolio/${id}/contacts`, {
+    method: 'PATCH',
+    body: JSON.stringify({ contacts }),
+  });
+
+export const updatePortfolioSocialMedia = (id: string, accounts: SocialMediaAccount[]): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>(`/portfolio/${id}/social-media`, {
+    method: 'PATCH',
+    body: JSON.stringify({ accounts }),
+  });
+
+export const updatePortfolioBrand = (id: string, brandIdentity: BrandIdentity): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>(`/portfolio/${id}/brand`, {
+    method: 'PATCH',
+    body: JSON.stringify({ brandIdentity }),
+  });
+
+export const updatePortfolioCalendar = (id: string, calendar: ContentCalendarItem[]): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>(`/portfolio/${id}/calendar`, {
+    method: 'PATCH',
+    body: JSON.stringify({ calendar }),
+  });
+
+export const updatePortfolioNotes = (id: string, notes: string[]): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>(`/portfolio/${id}/notes`, {
+    method: 'PATCH',
+    body: JSON.stringify({ notes }),
+  });
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
 
