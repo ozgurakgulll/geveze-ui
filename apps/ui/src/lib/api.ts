@@ -16,6 +16,13 @@ import { getStoredToken } from '@/contexts/AuthContext';
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001/api';
 
+let onUnauthorized: (() => void) | null = null;
+
+/** App.tsx tarafından çağrılır; 401 alındığında clearAuth() tetiklenir */
+export function setUnauthorizedHandler(handler: () => void) {
+  onUnauthorized = handler;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getStoredToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -26,6 +33,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
+    if (res.status === 401) {
+      onUnauthorized?.();
+    }
     const err = await res.json().catch(() => ({})) as { message?: string };
     throw new Error(err.message ?? `HTTP ${res.status}`);
   }

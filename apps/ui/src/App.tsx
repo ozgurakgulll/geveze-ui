@@ -376,6 +376,11 @@ function LoadingScreen() {
 function App() {
   const { token, clearAuth, user: authUser } = useAuth();
 
+  // 401 gelince otomatik oturumu kapat
+  useEffect(() => {
+    api.setUnauthorizedHandler(clearAuth);
+  }, [clearAuth]);
+
   if (!token) return <><Toaster position="top-right" richColors /><LoginPage /></>;
 
   return <AuthenticatedApp onLogout={clearAuth} authUser={authUser} />;
