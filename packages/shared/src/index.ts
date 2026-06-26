@@ -22,7 +22,8 @@ export type ViewType =
   | 'analytics'
   | 'archive'
   | 'trash'
-  | 'users';
+  | 'users'
+  | 'settings';
 
 export type PortfolioStatus = 'active' | 'on-hold' | 'left';
 

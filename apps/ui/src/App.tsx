@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Sidebar } from '@/components/Sidebar';
@@ -10,7 +11,10 @@ import { AppViewRouter } from '@/components/app/AppViewRouter';
 import { RecentlyDeletedPage } from '@/components/RecentlyDeletedPage';
 import { UsersManagementView } from '@/components/users/UsersManagementView';
 import { LoginPage } from '@/components/LoginPage';
+import { WorkspaceListPage } from '@/pages/WorkspaceListPage';
+import { WorkspaceSettingsPage } from '@/pages/WorkspaceSettingsPage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import type {
   ActivityLogItem,
   AppRole,
@@ -336,28 +340,6 @@ const normalizePortfolioCompany = (raw: unknown): PortfolioCompany | null => {
   };
 };
 
-const isViewType = (value: unknown): value is ViewType => {
-  return (
-    value === 'table' ||
-    value === 'portfolio' ||
-    value === 'board' ||
-    value === 'timeline' ||
-    value === 'dashboard' ||
-    value === 'calendar' ||
-    value === 'person' ||
-    value === 'analytics' ||
-    value === 'archive' ||
-    value === 'trash' ||
-    value === 'users'
-  );
-};
-
-const loadInitialView = (): ViewType => {
-  if (typeof window === 'undefined') return 'dashboard';
-  const saved = window.localStorage.getItem(VIEW_STORAGE_KEY);
-  return isViewType(saved) ? saved : 'dashboard';
-};
-
 // ─── Loading screen ──────────────────────────────────────────────────────────
 
 function LoadingScreen() {
@@ -373,22 +355,79 @@ function LoadingScreen() {
 
 // ─── App ─────────────────────────────────────────────────────────────────────
 
+// URL path → ViewType
+const PATH_TO_VIEW: Record<string, ViewType> = {
+  dashboard: 'dashboard',
+  table: 'table',
+  board: 'board',
+  timeline: 'timeline',
+  calendar: 'calendar',
+  portfolio: 'portfolio',
+  analytics: 'analytics',
+  archive: 'archive',
+  deleted: 'trash',
+  members: 'users',
+  person: 'person',
+  settings: 'settings',
+};
+
+const VIEW_TO_PATH: Record<ViewType, string> = {
+  dashboard: 'dashboard',
+  table: 'table',
+  board: 'board',
+  timeline: 'timeline',
+  calendar: 'calendar',
+  portfolio: 'portfolio',
+  analytics: 'analytics',
+  archive: 'archive',
+  trash: 'deleted',
+  users: 'members',
+  person: 'person',
+  settings: 'settings',
+};
+
 function App() {
   const { token, clearAuth, user: authUser } = useAuth();
 
-  // 401 gelince otomatik oturumu kapat
   useEffect(() => {
     api.setUnauthorizedHandler(clearAuth);
   }, [clearAuth]);
 
   if (!token) return <><Toaster position="top-right" richColors /><LoginPage /></>;
 
-  return <AuthenticatedApp onLogout={clearAuth} authUser={authUser} />;
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/workspaces" replace />} />
+      <Route path="/workspaces" element={<WorkspaceListPage />} />
+      <Route
+        path="/workspaces/:workspaceId/*"
+        element={<AuthenticatedApp onLogout={clearAuth} authUser={authUser} />}
+      />
+      <Route path="*" element={<Navigate to="/workspaces" replace />} />
+    </Routes>
+  );
 }
 
 function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUser: { id: string; role: string } | null }) {
-  // ── UI state (localStorage) ──
-  const [currentView, setCurrentView] = useState<ViewType>(loadInitialView);
+  const navigate = useNavigate();
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const location = useLocation();
+  const { setCurrentWorkspaceById } = useWorkspace();
+
+  // URL'deki son segment'ten view'ı türet
+  const viewFromUrl = useMemo((): ViewType => {
+    const segments = location.pathname.split('/').filter(Boolean);
+    const segment = segments[segments.length - 1] ?? 'dashboard';
+    return PATH_TO_VIEW[segment] ?? 'dashboard';
+  }, [location.pathname]);
+
+  // WorkspaceContext'i URL'deki workspaceId ile senkronize et
+  useEffect(() => {
+    if (workspaceId) setCurrentWorkspaceById(workspaceId);
+  }, [workspaceId, setCurrentWorkspaceById]);
+
+  // ── UI state ──
+  const [currentView, setCurrentView] = useState<ViewType>(viewFromUrl);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
@@ -451,14 +490,15 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
     ? appSettings['workspaceDescription']
     : 'Ajans iş takibi';
 
-  // ── Initial data fetch ──
+  // ── Initial data fetch (workspace değişince yeniden çalışır) ──
   useEffect(() => {
+    setIsLoading(true);
     Promise.all([
       api.getUsers(),
-      api.getTags(),
-      api.getServiceTypes(),
-      api.getPortfolio(),
-      api.getSettings(),
+      api.getTags(workspaceId),
+      api.getServiceTypes(workspaceId),
+      api.getPortfolio(workspaceId),
+      api.getSettings(workspaceId),
     ])
       .then(async ([fetchedUsers, fetchedTags, fetchedSTs, fetchedPortfolio, fetchedSettings]) => {
         setUsers(fetchedUsers);
@@ -469,8 +509,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         );
         setAppSettings(fetchedSettings);
         const [fetchedTasks, fetchedDeleted] = await Promise.all([
-          api.getTasks(fetchedUsers),
-          api.getDeletedTasks(fetchedUsers),
+          api.getTasks(fetchedUsers, { workspaceId }),
+          api.getDeletedTasks(fetchedUsers, workspaceId),
         ]);
         setTasks(fetchedTasks);
         setDeletedTasks(fetchedDeleted);
@@ -481,12 +521,12 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         });
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [workspaceId]);
 
-  // ── UI prefs → localStorage ──
+  // URL değişince currentView state'ini senkronize et
   useEffect(() => {
-    window.localStorage.setItem(VIEW_STORAGE_KEY, currentView);
-  }, [currentView]);
+    setCurrentView(viewFromUrl);
+  }, [viewFromUrl]);
 
   useEffect(() => {
     window.localStorage.setItem(TABLE_SCHEMA_STORAGE_KEY, JSON.stringify(tableColumnSchema));
@@ -591,11 +631,10 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   }, [onLogout]);
 
   const handleViewChange = useCallback((view: ViewType) => {
-    if (view === 'portfolio') {
-      setSelectedPortfolioCompanyId(null);
-    }
-    setCurrentView(view);
-  }, []);
+    if (view === 'portfolio') setSelectedPortfolioCompanyId(null);
+    const path = VIEW_TO_PATH[view] ?? 'dashboard';
+    navigate(`/workspaces/${workspaceId ?? ''}/${path}`);
+  }, [navigate, workspaceId]);
 
   const handleAddTask = useCallback((columnId?: string, dueDate?: Date, assigneeId?: string) => {
     if (columnId) {
@@ -741,7 +780,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         return;
       }
       api
-        .createPortfolioCompany(payload)
+        .createPortfolioCompany(payload, workspaceId)
         .then((created) => {
           const normalized = normalizePortfolioCompany(created) ?? created;
           setPortfolioCompaniesState((prev) => [...prev, normalized]);
@@ -1313,6 +1352,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               onResetPassword={handleResetUserPassword}
               onUpdateUserRole={handleUpdateUserRole}
             />
+          ) : currentView === 'settings' ? (
+            <WorkspaceSettingsPage />
           ) : (
           <AppViewRouter
             currentView={currentView}

@@ -27,6 +27,10 @@ class MonthlyQuotasDto {
 }
 
 export class CreatePortfolioCompanyDto {
+  @IsOptional()
+  @IsString()
+  workspaceId?: string;
+
   @IsString()
   name: string;
 

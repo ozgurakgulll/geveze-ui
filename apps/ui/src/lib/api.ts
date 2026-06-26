@@ -11,6 +11,12 @@ import type {
   Priority,
   ActivityLogItem,
   TaskAttachment,
+  Workspace,
+  WorkspaceMember,
+  WorkspaceRole,
+  UserPermissions,
+  CreateWorkspaceDto,
+  UpdateWorkspaceDto,
 } from '@/types';
 import { getStoredToken } from '@/contexts/AuthContext';
 
@@ -128,6 +134,7 @@ export const updateUserRole = (id: string, role: string): Promise<User> =>
 export async function getTasks(
   userList: User[],
   params?: {
+    workspaceId?: string;
     archived?: boolean;
     assigneeId?: string;
     status?: string;
@@ -140,6 +147,7 @@ export async function getTasks(
   },
 ): Promise<Task[]> {
   const q = new URLSearchParams();
+  if (params?.workspaceId) q.set('workspaceId', params.workspaceId);
   if (params?.archived !== undefined) q.set('archived', String(params.archived));
   if (params?.assigneeId) q.set('assigneeId', params.assigneeId);
   if (params?.status) q.set('status', params.status);
@@ -192,8 +200,9 @@ export async function updateTask(
 export const deleteTask = (id: string): Promise<void> =>
   request<void>(`/tasks/${id}`, { method: 'DELETE' });
 
-export async function getDeletedTasks(userList: User[]): Promise<Task[]> {
-  const raw = await request<Record<string, unknown>[]>('/tasks/deleted');
+export async function getDeletedTasks(userList: User[], workspaceId?: string): Promise<Task[]> {
+  const qs = workspaceId ? `?workspaceId=${workspaceId}` : '';
+  const raw = await request<Record<string, unknown>[]>(`/tasks/deleted${qs}`);
   return raw.map((t) => parseApiTask(t, userList));
 }
 
@@ -269,8 +278,10 @@ export const deleteTaskComment = (taskId: string, commentId: string): Promise<Ta
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
-export const getSettings = (): Promise<Record<string, unknown>> =>
-  request<Record<string, unknown>>('/settings');
+export const getSettings = (workspaceId?: string): Promise<Record<string, unknown>> => {
+  const qs = workspaceId ? `?workspaceId=${workspaceId}` : '';
+  return request<Record<string, unknown>>(`/settings${qs}`);
+};
 
 export const updateSetting = (key: string, value: unknown): Promise<void> =>
   request<void>(`/settings/${key}`, {
@@ -286,11 +297,13 @@ export const updateSettings = (settings: Record<string, unknown>): Promise<void>
 
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
-export const getPortfolio = (): Promise<PortfolioCompany[]> =>
-  request<PortfolioCompany[]>('/portfolio');
+export const getPortfolio = (workspaceId?: string): Promise<PortfolioCompany[]> => {
+  const qs = workspaceId ? `?workspaceId=${workspaceId}` : '';
+  return request<PortfolioCompany[]>(`/portfolio${qs}`);
+};
 
-export const createPortfolioCompany = (data: unknown): Promise<PortfolioCompany> =>
-  request<PortfolioCompany>('/portfolio', { method: 'POST', body: JSON.stringify(data) });
+export const createPortfolioCompany = (data: unknown, workspaceId?: string): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>('/portfolio', { method: 'POST', body: JSON.stringify({ ...(data as object), workspaceId }) });
 
 export const updatePortfolioCompany = (id: string, data: unknown): Promise<PortfolioCompany> =>
   request<PortfolioCompany>(`/portfolio/${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -330,8 +343,10 @@ export const updatePortfolioNotes = (id: string, notes: string[]): Promise<Portf
 
 // ─── Tags ─────────────────────────────────────────────────────────────────────
 
-export const getTags = (): Promise<{ id: string; name: string; color: string }[]> =>
-  request<{ id: string; name: string; color: string }[]>('/tags');
+export const getTags = (workspaceId?: string): Promise<{ id: string; name: string; color: string }[]> => {
+  const qs = workspaceId ? `?workspaceId=${workspaceId}` : '';
+  return request<{ id: string; name: string; color: string }[]>(`/tags${qs}`);
+};
 
 export const createTag = (name: string, color: string): Promise<{ id: string; name: string; color: string }> =>
   request<{ id: string; name: string; color: string }>('/tags', {
@@ -353,8 +368,10 @@ export const deleteTag = (id: string): Promise<void> =>
 
 // ─── Service Types ────────────────────────────────────────────────────────────
 
-export const getServiceTypes = (): Promise<{ id: string; name: string }[]> =>
-  request<{ id: string; name: string }[]>('/service-types');
+export const getServiceTypes = (workspaceId?: string): Promise<{ id: string; name: string }[]> => {
+  const qs = workspaceId ? `?workspaceId=${workspaceId}` : '';
+  return request<{ id: string; name: string }[]>(`/service-types${qs}`);
+};
 
 export const createServiceType = (name: string): Promise<{ id: string; name: string }> =>
   request<{ id: string; name: string }>('/service-types', {
@@ -370,3 +387,53 @@ export const updateServiceType = (id: string, name: string): Promise<{ id: strin
 
 export const deleteServiceType = (id: string): Promise<void> =>
   request<void>(`/service-types/${id}`, { method: 'DELETE' });
+
+// ─── Workspaces ───────────────────────────────────────────────────────────────
+
+export const getWorkspaces = (): Promise<Workspace[]> =>
+  request<Workspace[]>('/workspaces');
+
+export const createWorkspace = (dto: CreateWorkspaceDto): Promise<Workspace> =>
+  request<Workspace>('/workspaces', { method: 'POST', body: JSON.stringify(dto) });
+
+export const getWorkspace = (id: string): Promise<Workspace> =>
+  request<Workspace>(`/workspaces/${id}`);
+
+export const updateWorkspace = (id: string, dto: UpdateWorkspaceDto): Promise<Workspace> =>
+  request<Workspace>(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify(dto) });
+
+export const deleteWorkspace = (id: string): Promise<void> =>
+  request<void>(`/workspaces/${id}`, { method: 'DELETE' });
+
+export const addWorkspaceMember = (
+  workspaceId: string,
+  userId: string,
+  role?: WorkspaceRole,
+): Promise<WorkspaceMember> =>
+  request<WorkspaceMember>(`/workspaces/${workspaceId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ userId, role }),
+  });
+
+export const updateWorkspaceMemberRole = (
+  workspaceId: string,
+  userId: string,
+  role: WorkspaceRole,
+): Promise<WorkspaceMember> =>
+  request<WorkspaceMember>(`/workspaces/${workspaceId}/members/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+
+export const updateWorkspaceMemberPermissions = (
+  workspaceId: string,
+  userId: string,
+  permissions: Partial<UserPermissions>,
+): Promise<WorkspaceMember> =>
+  request<WorkspaceMember>(`/workspaces/${workspaceId}/members/${userId}/permissions`, {
+    method: 'PATCH',
+    body: JSON.stringify({ permissions }),
+  });
+
+export const removeWorkspaceMember = (workspaceId: string, userId: string): Promise<void> =>
+  request<void>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' });

@@ -84,6 +84,7 @@ export function Header({
     archive: 'Arşiv',
     trash: 'Son Silinenler',
     users: 'Kullanıcı Yönetimi',
+    settings: 'Alan Ayarları',
   };
 
   return (
@@ -209,7 +210,7 @@ export function Header({
         {/* View Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 flex-shrink-0">
           {(Object.keys(viewLabels) as ViewType[])
-            .filter((view) => view !== 'person' && view !== 'analytics' && view !== 'portfolio' && view !== 'users')
+            .filter((view) => view !== 'person' && view !== 'analytics' && view !== 'portfolio' && view !== 'users' && view !== 'settings')
             .map((view) => (
             <button
               key={view}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -28,15 +29,19 @@ import {
   Archive,
   LogOut,
   Users,
+  Check,
+  LayoutGrid,
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useUsers } from '@/contexts/UsersContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import type { ViewType } from '@/types';
 import { DEFAULT_MEMBER_PERMISSIONS } from '@/types';
 import logo from '@/assets/geveze-logo.png';
@@ -67,8 +72,10 @@ export function Sidebar({
   workspaceDescription = 'Ajans iş takibi',
   embedded = false,
 }: SidebarProps) {
+  const navigate = useNavigate();
   const users = useUsers();
   const { user: authUser } = useAuth();
+  const { workspaces, currentWorkspace } = useWorkspace();
   const isManager = authUser?.role === 'admin' || authUser?.role === 'manager';
   const effectiveCollapsed = embedded ? false : isCollapsed;
 
@@ -245,38 +252,83 @@ export function Sidebar({
               {!effectiveCollapsed && <span>Kullanıcılar</span>}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => handleViewChange('settings')}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              currentView === 'settings'
+                ? 'bg-[#E5E7FF] text-[#6161FF]'
+                : 'text-gray-700 hover:bg-gray-100',
+              effectiveCollapsed && 'justify-center px-2'
+            )}
+          >
+            <Settings className="h-5 w-5 flex-shrink-0" />
+            {!effectiveCollapsed && <span>Alan Ayarları</span>}
+          </button>
         </div>
 
         <Separator className="flex-shrink-0 my-2 mx-4" />
 
-        {/* Project Section + Team Members */}
+        {/* Workspace Section + Team Members */}
         <div className="flex-1 flex flex-col min-h-0 px-2 py-2 overflow-hidden">
           {!effectiveCollapsed && (
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Proje
+                Çalışma Alanı
               </span>
               <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </div>
           )}
-          
-          {/* Project Header */}
+
+          {/* Workspace Switcher */}
           {!effectiveCollapsed && (
-            <div className="flex-shrink-0 px-3 py-3 mb-2 bg-white rounded-lg border border-gray-200">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold bg-[#6161FF]"
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex-shrink-0 w-full flex items-center gap-3 px-3 py-2.5 mb-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors text-left">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                    style={{ backgroundColor: currentWorkspace?.color ?? '#6161FF' }}
+                  >
+                    {currentWorkspace?.icon
+                      ? currentWorkspace.icon
+                      : currentWorkspace?.name?.charAt(0).toUpperCase() ?? <Star className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate text-sm">
+                      {currentWorkspace?.name ?? companyName}
+                    </h3>
+                    <p className="text-xs text-gray-500 truncate">
+                      {currentWorkspace?.description ?? workspaceDescription}
+                    </p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {workspaces.map(ws => (
+                  <DropdownMenuItem
+                    key={ws.id}
+                    onClick={() => navigate(`/workspaces/${ws.id}/dashboard`)}
+                    className={cn('cursor-pointer gap-2', ws.id === currentWorkspace?.id && 'bg-indigo-50')}
+                  >
+                    <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: ws.color }} />
+                    <span className="truncate flex-1">{ws.name}</span>
+                    {ws.id === currentWorkspace?.id && <Check className="h-4 w-4 text-indigo-600" />}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => navigate('/workspaces')}
+                  className="cursor-pointer text-gray-500 gap-2"
                 >
-                  <Star className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{companyName}</h3>
-                  <p className="text-xs text-gray-500 truncate">{workspaceDescription}</p>
-                </div>
-              </div>
-            </div>
+                  <LayoutGrid className="h-4 w-4" />
+                  Tüm Alanlar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {projectItems.map((item) => (

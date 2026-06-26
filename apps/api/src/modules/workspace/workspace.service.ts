@@ -75,6 +75,16 @@ export class WorkspaceService {
     const baseSlug = slugify(dto.name) || 'workspace';
     const slug = await this.uniqueSlug(baseSlug);
 
+    const DEFAULT_PERMS = {
+      canViewAnalytics: false,
+      canViewArchive: true,
+      canViewTrash: true,
+      canManagePortfolio: false,
+      canCreateTasks: true,
+      canDeleteTasks: false,
+      canEditOthersTasks: false,
+    };
+
     const doc = await this.model.create({
       name: dto.name,
       slug,
@@ -86,6 +96,7 @@ export class WorkspaceService {
         {
           userId: createdBy,
           role: 'workspace_admin',
+          permissions: DEFAULT_PERMS,
           joinedAt: new Date(),
         },
       ],
