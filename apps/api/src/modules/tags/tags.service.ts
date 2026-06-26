@@ -26,6 +26,18 @@ export class TagsService {
     return this.toEntry(doc.toJSON() as Record<string, unknown>);
   }
 
+  async update(id: string, name?: string, color?: string): Promise<TagEntry> {
+    const updates: Record<string, string> = {};
+    if (name) updates['name'] = name;
+    if (color) updates['color'] = color;
+    const doc = await this.tagModel
+      .findByIdAndUpdate(id, updates, { new: true })
+      .lean()
+      .exec();
+    if (!doc) throw new NotFoundException(`Tag ${id} bulunamadı`);
+    return this.toEntry(doc);
+  }
+
   async remove(id: string): Promise<void> {
     const result = await this.tagModel.findByIdAndDelete(id).exec();
     if (!result) throw new NotFoundException(`Tag ${id} bulunamadı`);

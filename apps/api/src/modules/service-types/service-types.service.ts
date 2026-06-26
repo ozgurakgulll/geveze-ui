@@ -25,6 +25,15 @@ export class ServiceTypesService {
     return this.toEntry(doc.toJSON() as Record<string, unknown>);
   }
 
+  async update(id: string, name: string): Promise<ServiceTypeEntry> {
+    const doc = await this.model
+      .findByIdAndUpdate(id, { name }, { new: true })
+      .lean()
+      .exec();
+    if (!doc) throw new NotFoundException(`ServiceType ${id} bulunamadı`);
+    return this.toEntry(doc);
+  }
+
   async remove(id: string): Promise<void> {
     const result = await this.model.findByIdAndDelete(id).exec();
     if (!result) throw new NotFoundException(`ServiceType ${id} bulunamadı`);

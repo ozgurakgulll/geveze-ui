@@ -339,6 +339,15 @@ export const createTag = (name: string, color: string): Promise<{ id: string; na
     body: JSON.stringify({ name, color }),
   });
 
+export const updateTag = (
+  id: string,
+  updates: { name?: string; color?: string },
+): Promise<{ id: string; name: string; color: string }> =>
+  request<{ id: string; name: string; color: string }>(`/tags/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+
 export const deleteTag = (id: string): Promise<void> =>
   request<void>(`/tags/${id}`, { method: 'DELETE' });
 
@@ -350,6 +359,12 @@ export const getServiceTypes = (): Promise<{ id: string; name: string }[]> =>
 export const createServiceType = (name: string): Promise<{ id: string; name: string }> =>
   request<{ id: string; name: string }>('/service-types', {
     method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+
+export const updateServiceType = (id: string, name: string): Promise<{ id: string; name: string }> =>
+  request<{ id: string; name: string }>(`/service-types/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify({ name }),
   });
 

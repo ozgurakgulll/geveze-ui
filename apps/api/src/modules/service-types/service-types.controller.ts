@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus,
+  Controller, Get, Post, Patch, Delete, Param, Body, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ServiceTypesService, ServiceTypeEntry } from './service-types.service';
 import { IsString, MinLength } from 'class-validator';
@@ -22,6 +22,14 @@ export class ServiceTypesController {
   @Post()
   create(@Body() dto: CreateServiceTypeDto): Promise<ServiceTypeEntry> {
     return this.service.create(dto.name);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() dto: CreateServiceTypeDto,
+  ): Promise<ServiceTypeEntry> {
+    return this.service.update(id, dto.name);
   }
 
   @Delete(':id')
