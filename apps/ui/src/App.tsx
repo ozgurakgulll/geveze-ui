@@ -447,6 +447,9 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const companyName = typeof appSettings['companyName'] === 'string'
     ? appSettings['companyName']
     : 'Geveze';
+  const workspaceDescription = typeof appSettings['workspaceDescription'] === 'string'
+    ? appSettings['workspaceDescription']
+    : 'Ajans iş takibi';
 
   // ── Initial data fetch ──
   useEffect(() => {
@@ -1240,6 +1243,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         onClearAllData={handleClearAllData}
         onLogout={handleLogout}
         companyName={companyName}
+        workspaceDescription={workspaceDescription}
       />
 
       {/* Mobile Sidebar Drawer */}
@@ -1261,6 +1265,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               onClearAllData={handleClearAllData}
               onLogout={handleLogout}
               companyName={companyName}
+              workspaceDescription={workspaceDescription}
               embedded
             />
           </div>

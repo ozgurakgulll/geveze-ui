@@ -226,20 +226,20 @@ Yüksek trafikte darboğaz oluşabilir.
 
 ---
 
-## Karar Log (Güncellenecek)
+## Karar Log
 
-| Soru | Karar | Tarih | Karar Veren |
-|------|-------|-------|------------|
-| S1 Board soyutlaması | Faz 2'ye ertelendi | — | — |
-| S2 AppRole korunacak mı | Evet, korunacak | — | — |
-| S3 workspaceId konumu | Path param (/api/workspaces/:id) | — | — |
-| S4 workspace_viewer | Dahil et, UI sonrası | — | — |
-| S5 Workspace silme | Soft delete | — | — |
-| S6 Tek workspace UI | Switcher 2+ için | — | — |
-| S7 "Proje" bölümü adı | **KARAR BEKLİYOR** | — | — |
-| S8 Kim workspace oluşturabilir | Admin + Manager | — | — |
-| S9 Üye ekleme akışı | Önce liste seçimi | — | — |
-| S10 WorkspaceMember embed | Embed (< 200) | — | — |
-| S11 Settings prefix | /api/workspaces/:id/settings | — | — |
-| S12 URL Slug | Otomatik + kullanıcı düzenleyebilir | — | — |
-| S13 Cache stratejisi | Şimdilik index yeterli | — | — |
+| Soru | Karar | Tarih |
+|------|-------|-------|
+| S1 Board soyutlaması | Faz 2'ye ertelendi | 2026-06-26 |
+| S2 AppRole korunacak mı | Evet — AppRole + WorkspaceRole birlikte kullanılacak | 2026-06-26 |
+| S3 workspaceId konumu | Path param: `/api/workspaces/:workspaceId` | 2026-06-26 |
+| S4 workspace_viewer | Backend enum'a dahil edilecek, UI'da sonra aktif edilecek | 2026-06-26 |
+| S5 Workspace silme | Soft delete; archive ayrı tutulacak | 2026-06-26 |
+| S6 Tek workspace UI | Switcher her zaman gösterilecek | 2026-06-26 |
+| S7 "Proje" bölümü adı | "Çalışma Alanı" olarak değiştirilecek | 2026-06-26 |
+| S8 Kim workspace oluşturabilir | Her kullanıcı oluşturabilir | 2026-06-26 |
+| S9 Üye ekleme akışı | İlk versiyon mevcut kullanıcı listesinden seçim | 2026-06-26 |
+| S10 WorkspaceMember embed | İlk versiyon embed; 200+ üyede ayrı koleksiyona taşınır | 2026-06-26 |
+| S11 Settings prefix | `/api/workspaces/:workspaceId/settings` | 2026-06-26 |
+| S12 URL Slug | `name`'den otomatik üretilir, kullanıcı düzenleyebilir | 2026-06-26 |
+| S13 Cache stratejisi | Şimdilik compound index yeterli | 2026-06-26 |

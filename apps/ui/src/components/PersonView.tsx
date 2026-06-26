@@ -216,25 +216,21 @@ export function PersonView({
     [user.id],
   );
 
-  // Gerçek lastActiveAt varsa kullan; yoksa mock
   const { isOnline, lastSeenLabel } = useMemo(() => {
-    if (user.lastActiveAt) {
-      const diffMs = now.getTime() - new Date(user.lastActiveAt).getTime();
-      const diffMin = Math.floor(diffMs / 60_000);
-      const online = diffMin < 5;
-      let label = '';
-      if (!online) {
-        if (diffMin < 60) label = `${diffMin} dk önce görüldü`;
-        else if (diffMin < 1440) label = `${Math.floor(diffMin / 60)} sa önce görüldü`;
-        else label = `${Math.floor(diffMin / 1440)} gün önce görüldü`;
-      }
-      return { isOnline: online, lastSeenLabel: label };
+    if (!user.lastActiveAt) {
+      return { isOnline: false, lastSeenLabel: 'Son aktiflik bilinmiyor' };
     }
-    // Fallback: mock (lastActiveAt henüz set edilmemiş)
-    const mockOnline = rng() > 0.4;
-    const mockMin = Math.floor(rng() * 120) + 5;
-    return { isOnline: mockOnline, lastSeenLabel: `${mockMin} dk önce görüldü` };
-  }, [user.lastActiveAt, now, rng]);
+    const diffMs = now.getTime() - new Date(user.lastActiveAt).getTime();
+    const diffMin = Math.floor(diffMs / 60_000);
+    const online = diffMin < 5;
+    let label = '';
+    if (!online) {
+      if (diffMin < 60) label = `${diffMin} dk önce görüldü`;
+      else if (diffMin < 1440) label = `${Math.floor(diffMin / 60)} sa önce görüldü`;
+      else label = `${Math.floor(diffMin / 1440)} gün önce görüldü`;
+    }
+    return { isOnline: online, lastSeenLabel: label };
+  }, [user.lastActiveAt, now]);
 
   const weeklyHours = useMemo(() => {
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];

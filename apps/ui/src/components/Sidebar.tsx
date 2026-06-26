@@ -50,6 +50,7 @@ interface SidebarProps {
   onClearAllData?: () => void;
   onLogout?: () => void;
   companyName?: string;
+  workspaceDescription?: string;
   /** When true, renders full-width for use inside Sheet (mobile drawer) */
   embedded?: boolean;
 }
@@ -63,6 +64,7 @@ export function Sidebar({
   onClearAllData,
   onLogout,
   companyName = 'Geveze',
+  workspaceDescription = 'Ajans iş takibi',
   embedded = false,
 }: SidebarProps) {
   const users = useUsers();
@@ -271,7 +273,7 @@ export function Sidebar({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate">{companyName}</h3>
-                  <p className="text-xs text-gray-500 truncate">Ajans iş takibi</p>
+                  <p className="text-xs text-gray-500 truncate">{workspaceDescription}</p>
                 </div>
               </div>
             </div>

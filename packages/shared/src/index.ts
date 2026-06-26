@@ -120,6 +120,52 @@ export interface TableColumnSchemaItem {
 
 export type AppRole = 'admin' | 'manager' | 'member';
 
+export type WorkspaceRole =
+  | 'workspace_admin'
+  | 'workspace_manager'
+  | 'workspace_member'
+  | 'workspace_viewer';
+
+export interface WorkspaceMember {
+  userId: string;
+  role: WorkspaceRole;
+  permissions: UserPermissions;
+  joinedAt: string;
+  invitedBy?: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  members: WorkspaceMember[];
+}
+
+export interface CreateWorkspaceDto {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface UpdateWorkspaceDto {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface InviteMemberDto {
+  userId: string;
+  role?: WorkspaceRole;
+}
+
 export interface UserPermissions {
   canViewAnalytics: boolean;
   canViewArchive: boolean;

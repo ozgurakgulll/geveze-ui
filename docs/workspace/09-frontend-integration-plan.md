@@ -277,10 +277,7 @@ export const WorkspaceListPage = () => {
     return <CreateFirstWorkspacePrompt />;
   }
 
-  // Tek workspace varsa doğrudan yönlendir
-  if (workspaces.length === 1) {
-    return <Navigate to={`/workspaces/${workspaces[0].id}/dashboard`} replace />;
-  }
+  // Tek workspace olsa bile liste gösterilir (S6 kararı: switcher her zaman görünür)
 
   return (
     <div className="p-8">
