@@ -24,7 +24,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { priorityColors } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors } from '@/lib/constants';
 import type { Task } from '@/types';
 
 interface CalendarViewProps {

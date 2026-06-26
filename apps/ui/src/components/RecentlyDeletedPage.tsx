@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { priorityColors, priorityLabels } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels } from '@/lib/constants';
 import type { Task } from '@/types';
 import { format, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';

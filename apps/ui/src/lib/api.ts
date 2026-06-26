@@ -222,6 +222,23 @@ export const bulkReassignTasks = (
 export const bulkArchiveTasks = (ids: string[]): Promise<void> =>
   request<void>('/tasks/bulk/archive', { method: 'PATCH', body: JSON.stringify({ ids }) });
 
+// ─── Settings ─────────────────────────────────────────────────────────────────
+
+export const getSettings = (): Promise<Record<string, unknown>> =>
+  request<Record<string, unknown>>('/settings');
+
+export const updateSetting = (key: string, value: unknown): Promise<void> =>
+  request<void>(`/settings/${key}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+
+export const updateSettings = (settings: Record<string, unknown>): Promise<void> =>
+  request<void>('/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
+
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
 export const getPortfolio = (): Promise<PortfolioCompany[]> =>

@@ -22,7 +22,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { priorityColors, statusLabels } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { isTaskOverdue } from '@/lib/taskOverdue';
 import type { PortfolioCompany, Task, User } from '@/types';
 import {

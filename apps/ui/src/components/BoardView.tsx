@@ -24,7 +24,7 @@ import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-
 import { BoardColumn } from './BoardColumn';
 import { TaskCard } from './TaskCard';
 import type { Column, Task, User, PortfolioCompany } from '@/types';
-import { initialColumns } from '@/data/mockData';
+import { COLUMN_DEFINITIONS } from '@/lib/constants';
 import { getTaskProgress } from '@/lib/taskProgress';
 
 /** v2: önceki sürümde sütun başına kayıtlı sıra, üst bardaki Sırala (global) sırasını eziyordu */
@@ -84,7 +84,7 @@ export function BoardView({
   boardSortDir,
 }: BoardViewProps) {
   const [columnOrder, setColumnOrder] = useState<Column['id'][]>(() =>
-    initialColumns.map((column) => column.id)
+    COLUMN_DEFINITIONS.map((column) => column.id)
   );
   const [taskOrderByColumn, setTaskOrderByColumn] = useState<Record<string, string[]>>(loadTaskOrderByColumn);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -125,7 +125,7 @@ export function BoardView({
   const columns = useMemo<Column[]>(
     () =>
       visibleColumnOrder.map((columnId) => {
-        const baseColumn = initialColumns.find((column) => column.id === columnId);
+        const baseColumn = COLUMN_DEFINITIONS.find((column) => column.id === columnId);
         const title = baseColumn?.title ?? columnId;
         const color = baseColumn?.color ?? '#64748B';
         const filter = getColumnFilter(columnId);

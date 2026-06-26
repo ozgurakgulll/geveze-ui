@@ -26,7 +26,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import { statusLabels, priorityLabels, priorityColors } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import type { Task, PortfolioCompany } from '@/types';
 import { format, subDays, startOfDay } from 'date-fns';
 import { isTaskOverdue } from '@/lib/taskOverdue';

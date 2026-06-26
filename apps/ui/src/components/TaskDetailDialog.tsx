@@ -9,7 +9,7 @@ import { LabelChip } from '@/components/ui/LabelChip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskCommentsPanel } from '@/components/TaskCommentsPanel';
-import { priorityColors, priorityLabels, statusLabels } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
 import type { CustomColumnType, Priority, TableColumnSchemaItem, Task, TaskStatus, TaskAttachment } from '@/types';
 import { DocumentUploadDialog } from '@/components/DocumentUploadDialog';

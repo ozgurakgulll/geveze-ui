@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { priorityColors } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors } from '@/lib/constants';
 import type { Task } from '@/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';

@@ -35,7 +35,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { currentProject } from '@/data/mockData';
 import { useUsers } from '@/contexts/UsersContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ViewType } from '@/types';
@@ -50,6 +49,7 @@ interface SidebarProps {
   onSelectPerson: (personId: string) => void;
   onClearAllData?: () => void;
   onLogout?: () => void;
+  companyName?: string;
   /** When true, renders full-width for use inside Sheet (mobile drawer) */
   embedded?: boolean;
 }
@@ -62,6 +62,7 @@ export function Sidebar({
   onSelectPerson,
   onClearAllData,
   onLogout,
+  companyName = 'Geveze',
   embedded = false,
 }: SidebarProps) {
   const users = useUsers();
@@ -264,14 +265,13 @@ export function Sidebar({
             <div className="flex-shrink-0 px-3 py-3 mb-2 bg-white rounded-lg border border-gray-200">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: currentProject.color }}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold bg-[#6161FF]"
                 >
                   <Star className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{currentProject.name}</h3>
-                  <p className="text-xs text-gray-500 truncate">{currentProject.description}</p>
+                  <h3 className="font-semibold text-gray-900 truncate">{companyName}</h3>
+                  <p className="text-xs text-gray-500 truncate">Ajans iş takibi</p>
                 </div>
               </div>
             </div>

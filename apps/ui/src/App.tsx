@@ -33,7 +33,7 @@ import type {
 import { DEFAULT_MEMBER_PERMISSIONS } from '@/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { priorityLabels, statusLabels } from '@/data/mockData';
+import { PRIORITY_LABELS as priorityLabels, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { getTaskProgress } from '@/lib/taskProgress';
 import { isTaskOverdue } from '@/lib/taskOverdue';
 import * as api from '@/lib/api';
@@ -408,6 +408,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const [portfolioCompaniesState, setPortfolioCompaniesState] = useState<PortfolioCompany[]>([]);
   const [tagEntries, setTagEntries] = useState<{ id: string; name: string; color: string }[]>([]);
   const [serviceTypeEntries, setServiceTypeEntries] = useState<{ id: string; name: string }[]>([]);
+  const [appSettings, setAppSettings] = useState<Record<string, unknown>>({});
 
   // ── Derived lists ──
   const tagList = useMemo(() => tagEntries.map((e) => e.name), [tagEntries]);
@@ -438,6 +439,9 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   }), [isManager, currentUserPerms]);
 
   const canManagePortfolio = effectivePerms.canManagePortfolio;
+  const companyName = typeof appSettings['companyName'] === 'string'
+    ? appSettings['companyName']
+    : 'Geveze';
 
   // ── Initial data fetch ──
   useEffect(() => {
@@ -446,14 +450,16 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       api.getTags(),
       api.getServiceTypes(),
       api.getPortfolio(),
+      api.getSettings(),
     ])
-      .then(async ([fetchedUsers, fetchedTags, fetchedSTs, fetchedPortfolio]) => {
+      .then(async ([fetchedUsers, fetchedTags, fetchedSTs, fetchedPortfolio, fetchedSettings]) => {
         setUsers(fetchedUsers);
         setTagEntries(fetchedTags);
         setServiceTypeEntries(fetchedSTs);
         setPortfolioCompaniesState(
           fetchedPortfolio.map((c) => normalizePortfolioCompany(c) ?? c)
         );
+        setAppSettings(fetchedSettings);
         const [fetchedTasks, fetchedDeleted] = await Promise.all([
           api.getTasks(fetchedUsers),
           api.getDeletedTasks(fetchedUsers),
@@ -1224,6 +1230,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         onSelectPerson={handleSelectPerson}
         onClearAllData={handleClearAllData}
         onLogout={handleLogout}
+        companyName={companyName}
       />
 
       {/* Mobile Sidebar Drawer */}
@@ -1244,6 +1251,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               }}
               onClearAllData={handleClearAllData}
               onLogout={handleLogout}
+              companyName={companyName}
               embedded
             />
           </div>
@@ -1255,6 +1263,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
           currentView={currentView}
           onViewChange={handleViewChange}
           onAddTask={() => handleAddTask()}
+          companyName={companyName}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           assigneeFilter={globalAssigneeFilter}

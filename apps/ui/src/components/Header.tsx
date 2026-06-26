@@ -25,7 +25,7 @@ import {
   Menu,
   AlertCircle,
 } from 'lucide-react';
-import { currentProject, statusLabels } from '@/data/mockData';
+import { STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
 import type { TaskStatus } from '@/types';
 import type { ViewType } from '@/types';
@@ -36,6 +36,7 @@ interface HeaderProps {
   onAddTask: () => void;
   canAddTask?: boolean;
   onOpenMenu?: () => void;
+  companyName?: string;
   searchQuery?: string;
   onSearchChange?: (value: string) => void;
   assigneeFilter?: string;
@@ -56,6 +57,7 @@ export function Header({
   onAddTask,
   canAddTask = true,
   onOpenMenu,
+  companyName = 'Geveze',
   searchQuery = '',
   onSearchChange,
   assigneeFilter = '',
@@ -104,13 +106,12 @@ export function Header({
           )}
           <div className="flex items-center gap-2">
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-              style={{ backgroundColor: currentProject.color }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-[#6161FF]"
             >
               <Star className="h-4 w-4" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">{currentProject.name}</h1>
+              <h1 className="text-lg font-semibold text-gray-900">{companyName}</h1>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-yellow-500 hidden sm:flex">

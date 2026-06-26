@@ -30,7 +30,7 @@ import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { priorityColors, priorityLabels } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
 import type { TaskStatus, Priority } from '@/types';
 import { cn } from '@/lib/utils';

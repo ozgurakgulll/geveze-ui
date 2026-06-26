@@ -159,6 +159,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
       content = (
         <TableView
           tasks={filteredTasks}
+          users={users}
           onTaskClick={handleOpenTaskDetail}
           tableColumnSchema={tableColumnSchema}
           onTableColumnSchemaChange={setTableColumnSchema}

@@ -41,8 +41,7 @@ import {
 } from 'lucide-react';
 import type { Task, User, TaskAttachment } from '@/types';
 import type { TaskStatus, Priority } from '@/types';
-import { priorityColors, priorityLabels, statusLabels } from '@/data/mockData';
-import { initialColumns } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels, STATUS_LABELS as statusLabels, COLUMN_DEFINITIONS } from '@/lib/constants';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -405,7 +404,7 @@ export function TaskCard({
                   <span className="text-xs font-medium text-gray-500">Görev Durumu</span>
                 </div>
                 <div className="p-1 max-h-32 overflow-y-auto">
-                  {initialColumns.map((col) => (
+                  {COLUMN_DEFINITIONS.map((col) => (
                     <button
                       key={col.id}
                       type="button"

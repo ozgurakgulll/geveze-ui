@@ -14,7 +14,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import { priorityColors, priorityLabels } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
 import type { Task } from '@/types';
 import { format, differenceInCalendarDays, startOfDay } from 'date-fns';

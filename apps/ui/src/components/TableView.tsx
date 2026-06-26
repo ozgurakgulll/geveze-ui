@@ -63,12 +63,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  initialColumns,
-  priorityColors,
-  priorityLabels,
-  statusLabels,
-  users,
-} from '@/data/mockData';
+  COLUMN_DEFINITIONS,
+  PRIORITY_COLORS as priorityColors,
+  PRIORITY_LABELS as priorityLabels,
+  STATUS_LABELS as statusLabels,
+} from '@/lib/constants';
 import { TaskCommentsPanel } from '@/components/TaskCommentsPanel';
 import type {
   CustomColumnType,
@@ -273,6 +272,7 @@ type TableChangeConfirm =
 
 interface TableViewProps {
   tasks: Task[];
+  users?: User[];
   onTaskClick: (taskId: string) => void;
   searchQuery?: string;
   tableColumnSchema?: TableColumnSchemaItem[];
@@ -302,6 +302,7 @@ interface TableViewProps {
 
 export function TableView({
   tasks,
+  users = [],
   onTaskClick,
   searchQuery: searchProp,
   tableColumnSchema,
@@ -1468,7 +1469,7 @@ export function TableView({
                                     <span className="text-xs font-medium text-gray-500">Durum</span>
                                   </div>
                                   <div className="p-1 max-h-44 overflow-y-auto">
-                                    {initialColumns.map((colDef) => {
+                                    {COLUMN_DEFINITIONS.map((colDef) => {
                                       const st = colDef.id as TaskStatus;
                                       return (
                                         <button

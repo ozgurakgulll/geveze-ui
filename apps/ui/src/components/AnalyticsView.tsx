@@ -40,7 +40,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import { priorityColors, priorityLabels, statusLabels } from '@/data/mockData';
+import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
 import type { Task, PortfolioCompany } from '@/types';
 import { getTaskProgress } from '@/lib/taskProgress';

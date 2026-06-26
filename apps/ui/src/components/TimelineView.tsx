@@ -24,7 +24,7 @@ import {
 import { tr } from 'date-fns/locale';
 import type { Task } from '@/types';
 import { getTaskProgress, getTaskProgressGradient } from '@/lib/taskProgress';
-import { statusLabels } from '@/data/mockData';
+import { STATUS_LABELS as statusLabels } from '@/lib/constants';
 
 /** yyyy-MM-dd → yerel tarih (saat dilimi kayması olmadan) */
 function parseDateInput(s: string): Date {
