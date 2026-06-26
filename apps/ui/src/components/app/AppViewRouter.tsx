@@ -89,6 +89,7 @@ export interface AppViewRouterProps {
   setCurrentView: (view: ViewType) => void;
   handleSelectPerson: (personId: string) => void;
   handleAddAttachment: (taskId: string, attachment: TaskAttachment) => void;
+  workspaceId?: string;
 }
 
 function ViewFallback() {
@@ -201,6 +202,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
           onRemoveServiceType={handleRemoveServiceType}
           tasks={filteredTasks}
           onTaskClick={handleOpenTaskDetail}
+          workspaceId={props.workspaceId}
         />
       );
       break;
@@ -261,6 +263,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
           user={selected}
           tasks={filteredTasks}
           companies={portfolioCompaniesState}
+          workspaceId={props.workspaceId}
           onTaskClick={handleOpenTaskDetail}
           onCompanySelect={handleSelectPortfolioCompany}
           onBack={() => {
@@ -279,6 +282,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
           tasks={filteredTasks}
           companies={portfolioCompaniesState}
           serviceTypes={serviceTypes}
+          workspaceId={props.workspaceId}
           onTaskClick={handleOpenTaskDetail}
           onPersonSelect={handleSelectPerson}
           onCompanySelect={handleSelectPortfolioCompany}

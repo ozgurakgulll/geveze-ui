@@ -167,6 +167,39 @@ export interface InviteMemberDto {
   role?: WorkspaceRole;
 }
 
+// ─── Time Tracking ───────────────────────────────────────────────────────────
+
+export interface TimeEntry {
+  id: string;
+  taskId: string;
+  taskTitle?: string;
+  userId: string;
+  workspaceId: string;
+  portfolioCompanyId?: string;
+  startedAt: string;
+  stoppedAt?: string;
+  minutes?: number;
+  note?: string;
+  createdAt: string;
+}
+
+export interface ActiveTimer {
+  entryId: string;
+  taskId: string;
+  taskTitle: string;
+  startedAt: string;
+}
+
+export interface TimeEntryStats {
+  totalMinutes: number;
+  byUser: { userId: string; userName: string; minutes: number }[];
+  byTask: { taskId: string; taskTitle: string; minutes: number }[];
+  byPortfolio: { portfolioCompanyId: string; portfolioCompanyName: string; minutes: number }[];
+  byDay: { date: string; minutes: number }[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface UserPermissions {
   canViewAnalytics: boolean;
   canViewArchive: boolean;

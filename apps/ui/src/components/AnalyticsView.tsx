@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -45,13 +45,17 @@ import { useUsers } from '@/contexts/UsersContext';
 import type { Task, PortfolioCompany } from '@/types';
 import { getTaskProgress } from '@/lib/taskProgress';
 import { getOverdueCalendarDaysFromDue, isTaskOverdue } from '@/lib/taskOverdue';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import * as api from '@/lib/api';
+import type { TimeEntryStats } from '@geveze/shared';
+import { minutesToDisplay } from '@/contexts/TimerContext';
 
 interface AnalyticsViewProps {
   tasks: Task[];
   companies: PortfolioCompany[];
   serviceTypes?: string[];
+  workspaceId?: string;
   onTaskClick: (taskId: string) => void;
   onPersonSelect?: (personId: string) => void;
   onCompanySelect?: (companyId: string) => void;
@@ -766,7 +770,169 @@ function ContentTab({ companies, serviceTypes }: { companies: PortfolioCompany[]
   );
 }
 
-export function AnalyticsView({ tasks, companies, serviceTypes = [], onTaskClick, onPersonSelect, onCompanySelect }: AnalyticsViewProps) {
+function TimeTab({ workspaceId }: { workspaceId?: string }) {
+  const users = useUsers();
+  const [timeStats, setTimeStats] = useState<TimeEntryStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const now = new Date();
+    const from = format(startOfMonth(now), 'yyyy-MM-dd');
+    const to = format(now, 'yyyy-MM-dd');
+    api.getTimeStats({ workspaceId, from, to })
+      .then(setTimeStats)
+      .catch(() => setTimeStats(null))
+      .finally(() => setLoading(false));
+  }, [workspaceId]);
+
+  if (loading) {
+    return <div className="text-sm text-gray-400 py-12 text-center">Yükleniyor…</div>;
+  }
+
+  if (!timeStats || timeStats.totalMinutes === 0) {
+    return (
+      <div className="text-sm text-gray-400 py-16 text-center">
+        Bu ay henüz kayıtlı süre yok. Görevlerde zamanlayıcıyı başlatarak süre ekleyin.
+      </div>
+    );
+  }
+
+  const byUserChartData = timeStats.byUser.map(u => ({
+    name: users.find(usr => usr.id === u.userId)?.name ?? u.userId,
+    saat: +(u.minutes / 60).toFixed(1),
+  }));
+
+  const byPortfolioChartData = timeStats.byPortfolio.slice(0, 8).map(p => ({
+    name: p.portfolioCompanyName.length > 12 ? p.portfolioCompanyName.slice(0, 12) + '…' : p.portfolioCompanyName,
+    saat: +(p.minutes / 60).toFixed(1),
+  }));
+
+  const byDayChartData = timeStats.byDay.slice(-14).map(d => ({
+    gün: format(new Date(d.date), 'd MMM', { locale: tr }),
+    saat: +(d.minutes / 60).toFixed(1),
+  }));
+
+  return (
+    <div className="space-y-6">
+      {/* KPI satırı */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-2xl font-bold text-gray-900">{minutesToDisplay(timeStats.totalMinutes)}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Bu ay toplam</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-2xl font-bold text-gray-900">{timeStats.byUser.length}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Süre kaydeden kişi</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-2xl font-bold text-gray-900">{timeStats.byTask.length}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Görev sayısı</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Kişi bazında */}
+        {byUserChartData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Kişi Bazında Saat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={byUserChartData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" tick={{ fontSize: 10 }} unit="s" />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                    <Tooltip formatter={(v: number) => [`${v} saat`, 'Süre']} />
+                    <Bar dataKey="saat" fill="#6161FF" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Müşteri bazında */}
+        {byPortfolioChartData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Müşteri Bazında Saat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={byPortfolioChartData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" tick={{ fontSize: 10 }} unit="s" />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
+                    <Tooltip formatter={(v: number) => [`${v} saat`, 'Süre']} />
+                    <Bar dataKey="saat" fill="#10B981" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Günlük trend */}
+      {byDayChartData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Son 14 Gün Saatlik Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={byDayChartData}>
+                  <defs>
+                    <linearGradient id="timeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6161FF" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#6161FF" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="gün" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} unit="s" width={30} />
+                  <Tooltip formatter={(v: number) => [`${v} saat`, 'Süre']} />
+                  <Area type="monotone" dataKey="saat" stroke="#6161FF" fill="url(#timeGrad)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Görev kırılımı tablosu */}
+      {timeStats.byTask.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">En Çok Süre Harcanan Görevler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {timeStats.byTask.slice(0, 8).map(t => (
+                <div key={t.taskId} className="flex items-center gap-3">
+                  <span className="flex-1 text-xs text-gray-700 truncate">{t.taskTitle}</span>
+                  <span className="text-xs font-semibold text-gray-800 shrink-0">{minutesToDisplay(t.minutes)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+export function AnalyticsView({ tasks, companies, serviceTypes = [], workspaceId, onTaskClick, onPersonSelect, onCompanySelect }: AnalyticsViewProps) {
   const effectiveServiceTypes = serviceTypes.length > 0 ? serviceTypes : DEFAULT_SERVICE_TYPES;
   return (
     <ScrollArea className="h-full">
@@ -799,6 +965,10 @@ export function AnalyticsView({ tasks, companies, serviceTypes = [], onTaskClick
               <Film className="h-3.5 w-3.5" />
               İçerik Üretimi
             </TabsTrigger>
+            <TabsTrigger value="time" className="gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              Zaman
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -812,6 +982,9 @@ export function AnalyticsView({ tasks, companies, serviceTypes = [], onTaskClick
           </TabsContent>
           <TabsContent value="content">
             <ContentTab companies={companies} serviceTypes={effectiveServiceTypes} />
+          </TabsContent>
+          <TabsContent value="time">
+            <TimeTab workspaceId={workspaceId} />
           </TabsContent>
         </Tabs>
       </div>

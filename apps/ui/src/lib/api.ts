@@ -437,3 +437,76 @@ export const updateWorkspaceMemberPermissions = (
 
 export const removeWorkspaceMember = (workspaceId: string, userId: string): Promise<void> =>
   request<void>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' });
+
+// ─── Time Entries ─────────────────────────────────────────────────────────────
+
+import type { TimeEntry, TimeEntryStats } from '@geveze/shared';
+
+export const getActiveTimer = (): Promise<TimeEntry | null> =>
+  request<TimeEntry | null>('/time-entries/active');
+
+export const startTimer = (
+  taskId: string,
+  taskTitle: string,
+  workspaceId?: string,
+  portfolioCompanyId?: string,
+): Promise<TimeEntry> =>
+  request<TimeEntry>('/time-entries/start', {
+    method: 'POST',
+    body: JSON.stringify({ taskId, taskTitle, workspaceId, portfolioCompanyId }),
+  });
+
+export const stopTimer = (note?: string): Promise<TimeEntry> =>
+  request<TimeEntry>('/time-entries/stop', {
+    method: 'PATCH',
+    body: JSON.stringify({ note }),
+  });
+
+export const createManualTimeEntry = (data: {
+  taskId: string;
+  taskTitle: string;
+  minutes: number;
+  date: string;
+  note?: string;
+  workspaceId?: string;
+  portfolioCompanyId?: string;
+}): Promise<TimeEntry> =>
+  request<TimeEntry>('/time-entries/manual', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const getTaskTimeEntries = (taskId: string): Promise<TimeEntry[]> =>
+  request<TimeEntry[]>(`/time-entries/task/${taskId}`);
+
+export const getUserTimeEntries = (
+  userId: string,
+  params?: { from?: string; to?: string; workspaceId?: string },
+): Promise<TimeEntry[]> => {
+  const q = new URLSearchParams();
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (params?.workspaceId) q.set('workspaceId', params.workspaceId);
+  const qs = q.toString();
+  return request<TimeEntry[]>(`/time-entries/user/${userId}${qs ? `?${qs}` : ''}`);
+};
+
+export const getTimeStats = (params?: {
+  workspaceId?: string;
+  userId?: string;
+  portfolioCompanyId?: string;
+  from?: string;
+  to?: string;
+}): Promise<TimeEntryStats> => {
+  const q = new URLSearchParams();
+  if (params?.workspaceId) q.set('workspaceId', params.workspaceId);
+  if (params?.userId) q.set('userId', params.userId);
+  if (params?.portfolioCompanyId) q.set('portfolioCompanyId', params.portfolioCompanyId);
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  const qs = q.toString();
+  return request<TimeEntryStats>(`/time-entries/stats${qs ? `?${qs}` : ''}`);
+};
+
+export const deleteTimeEntry = (id: string): Promise<void> =>
+  request<void>(`/time-entries/${id}`, { method: 'DELETE' });

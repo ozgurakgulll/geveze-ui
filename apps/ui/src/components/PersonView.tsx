@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -25,6 +25,9 @@ import {
 import { PRIORITY_COLORS as priorityColors, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { isTaskOverdue } from '@/lib/taskOverdue';
 import type { PortfolioCompany, Task, User } from '@/types';
+import * as api from '@/lib/api';
+import type { TimeEntryStats } from '@geveze/shared';
+import { minutesToDisplay } from '@/contexts/TimerContext';
 import {
   addDays,
   differenceInDays,
@@ -51,6 +54,7 @@ interface PersonViewProps {
   user: User;
   tasks: Task[];
   companies: PortfolioCompany[];
+  workspaceId?: string;
   onTaskClick: (taskId: string) => void;
   onCompanySelect: (companyId: string) => void;
   onBack?: () => void;
@@ -109,6 +113,7 @@ export function PersonView({
   user,
   tasks,
   companies,
+  workspaceId,
   onTaskClick,
   onCompanySelect,
   onBack,
@@ -232,10 +237,27 @@ export function PersonView({
     return { isOnline: online, lastSeenLabel: label };
   }, [user.lastActiveAt, now]);
 
+  const [timeStats, setTimeStats] = useState<TimeEntryStats | null>(null);
+
+  useEffect(() => {
+    const from = format(startOfMonth(now), 'yyyy-MM-dd');
+    const to = format(now, 'yyyy-MM-dd');
+    api.getTimeStats({ userId: user.id, workspaceId, from, to })
+      .then(setTimeStats)
+      .catch(() => {});
+  }, [user.id, workspaceId, now]);
+
   const weeklyHours = useMemo(() => {
+    if (timeStats?.byDay && timeStats.byDay.length > 0) {
+      const last7 = timeStats.byDay.slice(-7);
+      return last7.map(d => ({
+        day: format(new Date(d.date), 'EEE', { locale: tr }),
+        hours: +(d.minutes / 60).toFixed(1),
+      }));
+    }
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     return days.map((day) => ({ day, hours: +(rng() * 6 + 4).toFixed(1) }));
-  }, [rng]);
+  }, [timeStats, rng]);
 
   const companyNotes = useMemo(() => {
     const notes: {
@@ -264,11 +286,14 @@ export function PersonView({
     return userTasks.filter((t) => t.updatedAt >= weekAgo).length;
   }, [userTasks, now]);
 
+  const monthHours = timeStats ? Math.floor(timeStats.totalMinutes / 60) : null;
+
   const kpiItems = [
     { key: 'active', label: 'Aktif Görev', value: activeTasks.length, color: '#F59E0B', icon: Clock },
     { key: 'overdue', label: 'Geciken', value: overdueTasks.length, color: '#EF4444', icon: AlertCircle },
     { key: 'companies', label: 'Şirket', value: assignedCompanies.length, color: '#6161FF', icon: Building2 },
     { key: 'completed', label: 'Tamamlanan', value: completedTasks.length, color: '#10B981', icon: CheckCircle2 },
+    ...(monthHours !== null ? [{ key: 'hours', label: 'Bu Ay (saat)', value: monthHours, color: '#8B5CF6', icon: TrendingUp }] : []),
   ];
 
   return (
@@ -322,7 +347,7 @@ export function PersonView({
         </div>
 
         {/* ──── KPI STAT BAR ──── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {kpiItems.map(({ key, label, value, color, icon: Icon }) => (
             <div
               key={key}
@@ -587,19 +612,46 @@ export function PersonView({
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="day" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 9 }} domain={[0, 12]} width={24} />
-                    <RechartsTooltip />
+                    <RechartsTooltip formatter={(v: number) => [`${v} saat`, 'Süre']} />
                     <Bar dataKey="hours" fill="#6161FF" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="text-[10px] text-gray-500">
-                Günlük ortalama:{' '}
-                <span className="font-semibold text-gray-800">
-                  {(weeklyHours.reduce((s, d) => s + d.hours, 0) / weeklyHours.length).toFixed(1)}{' '}
-                  saat
-                </span>
-              </p>
+              {timeStats && (
+                <p className="text-[10px] text-gray-500">
+                  Bu ay toplam:{' '}
+                  <span className="font-semibold text-gray-800">
+                    {minutesToDisplay(timeStats.totalMinutes)}
+                  </span>
+                </p>
+              )}
             </div>
+          </Sec>
+
+          {/* Görev bazında süre kırılımı */}
+          <Sec title="Görev Süre Kırılımı" icon={<Clock className="h-3.5 w-3.5" />}>
+            {!timeStats || timeStats.byTask.length === 0 ? (
+              <div className="text-xs text-gray-400 text-center py-6">
+                Bu ay kayıtlı süre yok
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {timeStats.byTask.slice(0, 6).map(t => {
+                  const pct = Math.round((t.minutes / timeStats.totalMinutes) * 100);
+                  return (
+                    <div key={t.taskId}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[11px] text-gray-700 truncate max-w-[140px]">{t.taskTitle}</span>
+                        <span className="text-[11px] font-semibold text-gray-800 shrink-0 ml-2">
+                          {minutesToDisplay(t.minutes)}
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-1.5" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </Sec>
         </div>
 

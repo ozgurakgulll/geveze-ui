@@ -4,24 +4,13 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import {
-  BriefcaseBusiness,
-  LayoutDashboard,
-  KanbanSquare,
-  CalendarDays,
-  Clock,
-  Table,
   Settings,
   ChevronLeft,
-  ChevronRight,
   Search,
   Bell,
   HelpCircle,
-  MoreHorizontal,
-  Star,
-  FolderOpen,
   BarChart3,
   ChevronDown,
   ChevronUp,
@@ -31,6 +20,10 @@ import {
   Users,
   Check,
   LayoutGrid,
+  BriefcaseBusiness,
+  UserCircle,
+  Plus,
+  Home,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -56,8 +49,49 @@ interface SidebarProps {
   onLogout?: () => void;
   companyName?: string;
   workspaceDescription?: string;
-  /** When true, renders full-width for use inside Sheet (mobile drawer) */
   embedded?: boolean;
+}
+
+function NavItem({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  collapsed,
+  indented,
+}: {
+  icon: React.ElementType;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  collapsed: boolean;
+  indented?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-sm font-medium transition-colors',
+        active ? 'bg-[#E5E7FF] text-[#6161FF]' : 'text-gray-700 hover:bg-gray-100',
+        collapsed && 'justify-center px-2',
+        indented && !collapsed && 'pl-7',
+      )}
+      title={collapsed ? label : undefined}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      {!collapsed && <span className="truncate">{label}</span>}
+    </button>
+  );
+}
+
+function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
+  if (collapsed) return null;
+  return (
+    <div className="px-3 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+      {label}
+    </div>
+  );
 }
 
 export function Sidebar({
@@ -69,242 +103,96 @@ export function Sidebar({
   onClearAllData,
   onLogout,
   companyName = 'Geveze',
-  workspaceDescription = 'Ajans iş takibi',
+  workspaceDescription: _workspaceDescription = 'Ajans iş takibi',
   embedded = false,
 }: SidebarProps) {
   const navigate = useNavigate();
   const users = useUsers();
   const { user: authUser } = useAuth();
   const { workspaces, currentWorkspace } = useWorkspace();
+
   const isManager = authUser?.role === 'admin' || authUser?.role === 'manager';
   const effectiveCollapsed = embedded ? false : isCollapsed;
 
-  // Derive permissions for current user
   const currentUserPerms = isManager
     ? null
     : users.find(u => u.id === authUser?.id)?.permissions ?? DEFAULT_MEMBER_PERMISSIONS;
-  const canViewArchive = isManager || (currentUserPerms?.canViewArchive ?? true);
-  const canViewTrash   = isManager || (currentUserPerms?.canViewTrash ?? true);
-  const [isEkipExpanded, setIsEkipExpanded] = useState(true);
+  const canViewAnalytics = isManager || (currentUserPerms?.canViewAnalytics ?? false);
+  const canViewArchive  = isManager || (currentUserPerms?.canViewArchive ?? true);
+  const canViewTrash    = isManager || (currentUserPerms?.canViewTrash ?? true);
 
-  const menuItems = [
-    { id: 'dashboard' as ViewType, label: 'Gösterge Paneli', icon: LayoutDashboard },
-    { id: 'board' as ViewType, label: 'Tahta', icon: KanbanSquare },
-    { id: 'timeline' as ViewType, label: 'Zaman Çizelgesi', icon: Clock },
-    { id: 'calendar' as ViewType, label: 'Takvim', icon: CalendarDays },
-  ];
+  const [isEkipExpanded, setIsEkipExpanded] = useState(false);
 
-  const projectItems: { view: ViewType; label: string; icon: typeof FolderOpen }[] = [
-    { view: 'dashboard', label: 'Genel Bakış', icon: FolderOpen },
-    ...(isManager ? [{ view: 'analytics' as ViewType, label: 'Analitik', icon: BarChart3 }] : []),
-    { view: 'portfolio', label: 'Portföy', icon: BriefcaseBusiness },
-  ];
-
-  const handleViewChange = (view: ViewType) => {
-    onViewChange(view);
-  };
+  const isContentView = ['dashboard', 'table', 'board', 'timeline', 'calendar'].includes(currentView);
 
   return (
     <div
       className={cn(
         'flex flex-col min-h-0 bg-[#F5F6F8] border-r border-gray-200 transition-all duration-300 ease-in-out',
-        embedded ? 'w-full' : isCollapsed ? 'w-[70px]' : 'w-[260px]',
+        embedded ? 'w-full' : isCollapsed ? 'w-[60px]' : 'w-[240px]',
         !embedded && 'hidden md:flex'
       )}
     >
-      {/* Logo Area */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-        {!effectiveCollapsed && (
-          <div className="flex items-center gap-2">
-            <img
-              src={logo}
-              alt="Geveze CRM"
-              className="h-7 w-auto object-contain"
-            />
-          </div>
-        )}
-        {effectiveCollapsed && (
+      {/* Logo */}
+      <div className="flex items-center justify-between h-[54px] px-3 border-b border-gray-200 flex-shrink-0">
+        {!effectiveCollapsed ? (
+          <>
+            <img src={logo} alt="Geveze CRM" className="h-6 w-auto object-contain" />
+            {!embedded && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-gray-400 hover:text-gray-600"
+                onClick={onToggleCollapse}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        ) : (
           <img
             src={logo}
             alt="Geveze CRM"
-            className="h-7 w-auto object-contain mx-auto"
+            className="h-6 w-auto object-contain mx-auto cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={onToggleCollapse}
+            onKeyDown={(e) => { if (e.key === 'Enter') onToggleCollapse(); }}
           />
-        )}
-        {!effectiveCollapsed && !embedded && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-500 hover:text-gray-700"
-            onClick={onToggleCollapse}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        )}
-        {effectiveCollapsed && !embedded && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-gray-500 hover:text-gray-700 absolute -right-3 top-14 bg-white border border-gray-200 rounded-full shadow-sm"
-            onClick={onToggleCollapse}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         )}
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Search */}
-        {!effectiveCollapsed && (
-          <div className="flex-shrink-0 p-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <ScrollArea className="flex-1">
+        <div className="p-2 pb-4">
+          {/* Search */}
+          {!effectiveCollapsed && (
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Ara..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6161FF] focus:border-transparent"
+                className="w-full h-8 pl-8 pr-3 rounded-lg bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6161FF] focus:border-transparent"
               />
             </div>
-          </div>
-        )}
-
-        {/* Main Menu */}
-        <div className="flex-shrink-0 px-2 py-2">
-          {!effectiveCollapsed && (
-            <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ana Menü
-            </div>
-          )}
-          <button
-            onClick={() => handleViewChange('table')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentView === 'table'
-                  ? 'bg-[#E5E7FF] text-[#6161FF]'
-                  : 'text-gray-700 hover:bg-gray-100',
-                effectiveCollapsed && 'justify-center px-2'
-            )}
-          >
-            <Table className="h-5 w-5 flex-shrink-0" />
-            {!effectiveCollapsed && <span>Ana Tablo</span>}
-          </button>
-
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleViewChange(item.id)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentView === item.id
-                  ? 'bg-[#E5E7FF] text-[#6161FF]'
-                  : 'text-gray-700 hover:bg-gray-100',
-                effectiveCollapsed && 'justify-center px-2'
-              )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!effectiveCollapsed && <span>{item.label}</span>}
-            </button>
-          ))}
-          {canViewArchive && (
-            <button
-              type="button"
-              onClick={() => handleViewChange('archive')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentView === 'archive'
-                  ? 'bg-[#E5E7FF] text-[#6161FF]'
-                  : 'text-gray-700 hover:bg-gray-100',
-                effectiveCollapsed && 'justify-center px-2'
-              )}
-            >
-              <Archive className="h-5 w-5 flex-shrink-0" />
-              {!effectiveCollapsed && <span>Arşiv</span>}
-            </button>
-          )}
-          {canViewTrash && (
-            <button
-              type="button"
-              onClick={() => handleViewChange('trash')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentView === 'trash'
-                  ? 'bg-[#E5E7FF] text-[#6161FF]'
-                  : 'text-gray-500 hover:bg-gray-100',
-                effectiveCollapsed && 'justify-center px-2'
-              )}
-            >
-              <Trash2 className="h-5 w-5 flex-shrink-0" />
-              {!effectiveCollapsed && <span>Son Silinenler</span>}
-            </button>
-          )}
-          {isManager && (
-            <button
-              type="button"
-              onClick={() => handleViewChange('users')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentView === 'users'
-                  ? 'bg-[#E5E7FF] text-[#6161FF]'
-                  : 'text-gray-700 hover:bg-gray-100',
-                effectiveCollapsed && 'justify-center px-2'
-              )}
-            >
-              <Users className="h-5 w-5 flex-shrink-0" />
-              {!effectiveCollapsed && <span>Kullanıcılar</span>}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => handleViewChange('settings')}
-            className={cn(
-              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              currentView === 'settings'
-                ? 'bg-[#E5E7FF] text-[#6161FF]'
-                : 'text-gray-700 hover:bg-gray-100',
-              effectiveCollapsed && 'justify-center px-2'
-            )}
-          >
-            <Settings className="h-5 w-5 flex-shrink-0" />
-            {!effectiveCollapsed && <span>Alan Ayarları</span>}
-          </button>
-        </div>
-
-        <Separator className="flex-shrink-0 my-2 mx-4" />
-
-        {/* Workspace Section + Team Members */}
-        <div className="flex-1 flex flex-col min-h-0 px-2 py-2 overflow-hidden">
-          {!effectiveCollapsed && (
-            <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Çalışma Alanı
-              </span>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </div>
           )}
 
-          {/* Workspace Switcher */}
-          {!effectiveCollapsed && (
+          {/* ── ÇALIŞMA ALANI ── */}
+          <SectionLabel label="Çalışma Alanı" collapsed={effectiveCollapsed} />
+
+          {!effectiveCollapsed ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex-shrink-0 w-full flex items-center gap-3 px-3 py-2.5 mb-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors text-left">
+                <button className="w-full flex items-center gap-2.5 px-2 py-2 mb-1 rounded-lg bg-white border border-gray-200 hover:border-indigo-300 transition-colors text-left">
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
                     style={{ backgroundColor: currentWorkspace?.color ?? '#6161FF' }}
                   >
-                    {currentWorkspace?.icon
-                      ? currentWorkspace.icon
-                      : currentWorkspace?.name?.charAt(0).toUpperCase() ?? <Star className="h-4 w-4" />}
+                    {currentWorkspace?.name?.charAt(0).toUpperCase() ?? 'G'}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate text-sm">
-                      {currentWorkspace?.name ?? companyName}
-                    </h3>
-                    <p className="text-xs text-gray-500 truncate">
-                      {currentWorkspace?.description ?? workspaceDescription}
-                    </p>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <span className="flex-1 text-sm font-medium text-gray-800 truncate">
+                    {currentWorkspace?.name ?? companyName}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
@@ -314,9 +202,9 @@ export function Sidebar({
                     onClick={() => navigate(`/workspaces/${ws.id}/dashboard`)}
                     className={cn('cursor-pointer gap-2', ws.id === currentWorkspace?.id && 'bg-indigo-50')}
                   >
-                    <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: ws.color }} />
-                    <span className="truncate flex-1">{ws.name}</span>
-                    {ws.id === currentWorkspace?.id && <Check className="h-4 w-4 text-indigo-600" />}
+                    <div className="w-3.5 h-3.5 rounded flex-shrink-0" style={{ backgroundColor: ws.color }} />
+                    <span className="flex-1 truncate">{ws.name}</span>
+                    {ws.id === currentWorkspace?.id && <Check className="h-3.5 w-3.5 text-indigo-600" />}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -324,158 +212,212 @@ export function Sidebar({
                   onClick={() => navigate('/workspaces')}
                   className="cursor-pointer text-gray-500 gap-2"
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <LayoutGrid className="h-3.5 w-3.5" />
                   Tüm Alanlar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate('/workspaces')}
+                  className="cursor-pointer text-indigo-600 gap-2"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Yeni Alan Ekle
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : (
+            <button
+              className="w-full flex justify-center py-2 mb-1"
+              onClick={() => navigate('/workspaces')}
+              title={currentWorkspace?.name ?? companyName}
+            >
+              <div
+                className="w-7 h-7 rounded-md flex items-center justify-center text-white text-xs font-bold"
+                style={{ backgroundColor: currentWorkspace?.color ?? '#6161FF' }}
+              >
+                {currentWorkspace?.name?.charAt(0).toUpperCase() ?? 'G'}
+              </div>
+            </button>
           )}
 
-          {projectItems.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => handleViewChange(item.view)}
-              className={cn(
-                'flex-shrink-0 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentView === item.view ? 'bg-[#E5E7FF] text-[#6161FF]' : 'text-gray-700 hover:bg-gray-100',
-                effectiveCollapsed && 'justify-center px-2'
-              )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!effectiveCollapsed && <span>{item.label}</span>}
-            </button>
-          ))}
+          {/* Ana içerik alanına giriş butonu */}
+          <NavItem
+            icon={Home}
+            label="Görev Panosu"
+            active={isContentView}
+            onClick={() => onViewChange('table')}
+            collapsed={effectiveCollapsed}
+            indented
+          />
 
-          {/* Ekip - Tıklanabilir, varsayılan açık, scroll edilebilir liste */}
-          {!effectiveCollapsed && (
+          {/* ── RAPORLAR ── */}
+          <SectionLabel label="Raporlar" collapsed={effectiveCollapsed} />
+
+          {canViewAnalytics && (
+            <NavItem
+              icon={BarChart3}
+              label="Analitik"
+              active={currentView === 'analytics'}
+              onClick={() => onViewChange('analytics')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          <NavItem
+            icon={BriefcaseBusiness}
+            label="Portföy"
+            active={currentView === 'portfolio'}
+            onClick={() => onViewChange('portfolio')}
+            collapsed={effectiveCollapsed}
+          />
+          <NavItem
+            icon={UserCircle}
+            label="Kişi Görünümü"
+            active={currentView === 'person'}
+            onClick={() => onViewChange('person')}
+            collapsed={effectiveCollapsed}
+          />
+
+          {/* ── EKİP ── */}
+          {!effectiveCollapsed ? (
             <>
               <button
                 type="button"
-                onClick={() => setIsEkipExpanded((prev) => !prev)}
-                className="flex-shrink-0 flex w-full items-center justify-between px-3 py-2 mt-2 rounded-lg hover:bg-gray-100 transition-colors"
+                onClick={() => setIsEkipExpanded(p => !p)}
+                className="w-full flex items-center justify-between px-3 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
               >
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ekip
-                </span>
+                <span>Ekip</span>
                 <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {users.length}
-                  </Badge>
-                  {isEkipExpanded ? (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  )}
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1">{users.length}</Badge>
+                  {isEkipExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 </div>
               </button>
               {isEkipExpanded && (
-                <ScrollArea className="flex-1 min-h-0">
-                  <div className="px-3 space-y-2 py-2">
-                    {users.map((user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => onSelectPerson(user.id)}
-                        className="w-full flex items-center gap-2 text-left rounded-md px-2 py-1 hover:bg-gray-100"
-                      >
-                        <Avatar
-                          className="w-7 h-7 border-2 border-white"
-                          style={{ backgroundColor: user.color }}
-                        >
-                          <AvatarFallback className="text-[10px] font-medium text-white">
-                            {user.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-800 truncate">{user.name}</div>
-                          {user.title && (
-                            <div className="text-xs text-gray-500 truncate">{user.title}</div>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="space-y-0.5">
+                  {users.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => onSelectPerson(user.id)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-left"
+                    >
+                      <Avatar className="w-6 h-6 flex-shrink-0" style={{ backgroundColor: user.color }}>
+                        <AvatarFallback className="text-[9px] font-medium text-white">
+                          {user.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-gray-800 truncate">{user.name}</div>
+                        {user.title && (
+                          <div className="text-[10px] text-gray-500 truncate">{user.title}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               )}
             </>
-          )}
-          {effectiveCollapsed && !embedded && (
-            <div className="flex items-center justify-center px-2">
-              <div className="flex -space-x-2">
-                {users.slice(0, 3).map((user) => (
-                  <Avatar
-                    key={user.id}
-                    className="w-8 h-8 border-2 border-white cursor-pointer hover:scale-110 transition-transform"
-                    style={{ backgroundColor: user.color }}
-                  >
-                    <AvatarFallback className="text-xs font-medium text-white">
-                      {user.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1 py-2">
+              {users.slice(0, 4).map((user) => (
+                <Avatar
+                  key={user.id}
+                  className="w-7 h-7 cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all"
+                  style={{ backgroundColor: user.color }}
+                  onClick={() => onSelectPerson(user.id)}
+                >
+                  <AvatarFallback className="text-[9px] font-medium text-white">
+                    {user.initials}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Bottom Actions */}
-      <div className="p-3 border-t border-gray-200">
-        <div className={cn('flex items-center gap-2', effectiveCollapsed && 'flex-col')}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-gray-500 hover:text-gray-700"
-          >
-            <Bell className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-gray-500 hover:text-gray-700"
-          >
-            <HelpCircle className="h-5 w-5" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-gray-500 hover:text-gray-700"
-                aria-label="Ayarlar"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top">
-              {onLogout && (
-                <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Çıkış Yap
-                </DropdownMenuItem>
-              )}
-              {onClearAllData && (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={onClearAllData}
-                  className="cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Verileri temizle ve sıfırla
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Avatar
-            className="w-9 h-9 border-2 border-white cursor-pointer"
-            style={{ backgroundColor: users[0].color }}
-          >
-            <AvatarFallback className="text-xs font-medium text-white">
-              {users[0].initials}
-            </AvatarFallback>
-          </Avatar>
+          {/* ── YÖNETİM ── */}
+          <SectionLabel label="Yönetim" collapsed={effectiveCollapsed} />
+
+          {isManager && (
+            <NavItem
+              icon={Users}
+              label="Kullanıcılar"
+              active={currentView === 'users'}
+              onClick={() => onViewChange('users')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          {canViewArchive && (
+            <NavItem
+              icon={Archive}
+              label="Arşiv"
+              active={currentView === 'archive'}
+              onClick={() => onViewChange('archive')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          {canViewTrash && (
+            <NavItem
+              icon={Trash2}
+              label="Son Silinenler"
+              active={currentView === 'trash'}
+              onClick={() => onViewChange('trash')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          <NavItem
+            icon={Settings}
+            label="Alan Ayarları"
+            active={currentView === 'settings'}
+            onClick={() => onViewChange('settings')}
+            collapsed={effectiveCollapsed}
+          />
         </div>
+      </ScrollArea>
+
+      {/* Bottom Bar */}
+      <div className={cn(
+        'flex-shrink-0 p-2 border-t border-gray-200',
+        effectiveCollapsed ? 'flex flex-col items-center gap-1' : 'flex items-center gap-1'
+      )}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
+          <Bell className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-8 w-8 ml-auto rounded-full flex-shrink-0',
+                effectiveCollapsed && 'ml-0'
+              )}
+              style={{ backgroundColor: users[0]?.color ?? '#6161FF' }}
+            >
+              <AvatarFallback className="text-xs font-medium text-white rounded-full flex items-center justify-center w-full h-full">
+                {users[0]?.initials ?? authUser?.name?.charAt(0) ?? 'K'}
+              </AvatarFallback>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top">
+            {onLogout && (
+              <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+                <LogOut className="h-4 w-4 mr-2" />
+                Çıkış Yap
+              </DropdownMenuItem>
+            )}
+            {onClearAllData && (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={onClearAllData}
+                className="cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Verileri temizle
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

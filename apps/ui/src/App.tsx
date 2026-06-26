@@ -1277,7 +1277,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         currentView={currentView}
         onViewChange={handleViewChange}
         isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
         onSelectPerson={handleSelectPerson}
         onClearAllData={handleClearAllData}
         onLogout={handleLogout}
@@ -1404,6 +1404,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
             setCurrentView={setCurrentView}
             handleSelectPerson={handleSelectPerson}
             handleAddAttachment={handleAddAttachment}
+            workspaceId={workspaceId}
           />
           )}
         </main>

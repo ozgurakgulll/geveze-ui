@@ -9,6 +9,7 @@ import { TagsModule } from './modules/tags/tags.module';
 import { ServiceTypesModule } from './modules/service-types/service-types.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
+import { TimeEntriesModule } from './modules/time-entries/time-entries.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
@@ -27,6 +28,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     ServiceTypesModule,
     SettingsModule,
     WorkspaceModule,
+    TimeEntriesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,9 +12,12 @@ import type {
   PortfolioStatus,
   Task,
 } from '@/types';
-import { Building2, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Building2, Plus, Clock } from 'lucide-react';
+import { format, startOfMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import * as api from '@/lib/api';
+import type { TimeEntryStats } from '@geveze/shared';
+import { minutesToDisplay } from '@/contexts/TimerContext';
 
 interface PortfolioViewProps {
   companies: PortfolioCompany[];
@@ -31,6 +34,7 @@ interface PortfolioViewProps {
   onRemoveServiceType?: (name: string) => void;
   tasks?: Task[];
   onTaskClick?: (taskId: string) => void;
+  workspaceId?: string;
 }
 
 const statusMap: Record<PortfolioStatus, { label: string; className: string }> = {
@@ -66,8 +70,29 @@ export function PortfolioView({
   onRemoveServiceType,
   tasks = [],
   onTaskClick,
+  workspaceId,
 }: PortfolioViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [timeStats, setTimeStats] = useState<TimeEntryStats | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    const from = format(startOfMonth(now), 'yyyy-MM-dd');
+    const to = format(now, 'yyyy-MM-dd');
+    api.getTimeStats({ workspaceId, from, to })
+      .then(setTimeStats)
+      .catch(() => {});
+  }, [workspaceId]);
+
+  const companyHoursMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (timeStats) {
+      for (const p of timeStats.byPortfolio) {
+        map[p.portfolioCompanyId] = p.minutes;
+      }
+    }
+    return map;
+  }, [timeStats]);
 
   const selectedCompany = useMemo(
     () => companies.find((c) => c.id === selectedCompanyId) ?? null,
@@ -150,6 +175,13 @@ export function PortfolioView({
                     {company.monthlyQuotas.post} · Hikaye {company.monthlyQuotas.story} · 3D{' '}
                     {company.monthlyQuotas.render3d ?? 0}
                   </div>
+
+                  {companyHoursMap[company.id] != null && companyHoursMap[company.id] > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded-md px-2.5 py-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Bu ay: <strong>{minutesToDisplay(companyHoursMap[company.id])}</strong></span>
+                    </div>
+                  )}
 
                   <Button
                     className="w-full mt-auto bg-[#6161FF] hover:bg-[#5050E0]"

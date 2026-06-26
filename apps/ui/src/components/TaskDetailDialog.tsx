@@ -24,11 +24,17 @@ import {
   Upload,
   X,
   Plus,
+  Play,
+  Square,
+  Clock,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { getTaskProgress, getTaskProgressGradient } from '@/lib/taskProgress';
 import { cn } from '@/lib/utils';
+import { useTimer, formatElapsed, minutesToDisplay } from '@/contexts/TimerContext';
+import * as api from '@/lib/api';
+import type { TimeEntry } from '@geveze/shared';
 
 interface TaskEditPayload {
   title: string;
@@ -66,7 +72,7 @@ interface TaskDetailDialogProps {
   presentation?: 'dialog' | 'sheet';
 }
 
-type TaskDetailTab = 'updates' | 'files' | 'history';
+type TaskDetailTab = 'updates' | 'files' | 'history' | 'time';
 
 export type TaskDetailPresentation = 'dialog' | 'sheet';
 
@@ -165,6 +171,25 @@ function TaskDetailDialogContent({
   presentation = 'dialog',
 }: TaskDetailDialogContentProps) {
   const users = useUsers();
+  const { activeTimer, elapsedSeconds, startTimer, stopTimer } = useTimer();
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const isTimerOnThisTask = activeTimer?.taskId === task.id;
+
+  useEffect(() => {
+    if (open) {
+      api.getTaskTimeEntries(task.id).then(setTimeEntries).catch(() => {});
+    }
+  }, [open, task.id]);
+
+  const handleStartTimer = async () => {
+    await startTimer(task.id, task.title);
+  };
+
+  const handleStopTimer = async () => {
+    const entry = await stopTimer();
+    if (entry) setTimeEntries((prev) => [entry, ...prev]);
+  };
+
   const initialDraft = createDraft(task);
   const baseTags = availableTagsProp.length > 0 ? availableTagsProp : FALLBACK_TAGS;
   const [activeTab, setActiveTab] = useState<TaskDetailTab>('updates');
@@ -499,6 +524,44 @@ function TaskDetailDialogContent({
                   </select>
                 </div>
 
+                {/* Zamanlayıcı — sadece in-progress görevde görünür */}
+                {status === 'in-progress' && (
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 mb-1">Süre Takibi</div>
+                    {isTimerOnThisTask ? (
+                      <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-red-200 bg-red-50">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                        </span>
+                        <span className="font-mono text-sm font-semibold text-red-700 flex-1">
+                          {formatElapsed(elapsedSeconds)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-100 px-2"
+                          onClick={handleStopTimer}
+                        >
+                          <Square className="h-3 w-3 fill-current" />
+                          Durdur
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full h-10 gap-2 text-[#6161FF] border-[#6161FF]/30 hover:bg-[#6161FF]/5"
+                        onClick={handleStartTimer}
+                        disabled={!!activeTimer}
+                        title={activeTimer ? 'Önce aktif zamanlayıcıyı durdurun' : 'Zamanlayıcıyı başlat'}
+                      >
+                        <Play className="h-4 w-4 fill-current" />
+                        {activeTimer ? 'Başka görev çalışıyor...' : 'Zamanlayıcıyı Başlat'}
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <div className="text-xs font-medium text-gray-500 mb-1">Öncelik</div>
                   <select
@@ -818,6 +881,14 @@ function TaskDetailDialogContent({
                   <History className="h-4 w-4 mr-2" />
                   Etkinlik Günlüğü
                 </Button>
+                <Button
+                  variant={activeTab === 'time' ? 'default' : 'ghost'}
+                  className={activeTab === 'time' ? 'bg-[#6161FF] hover:bg-[#5050E0]' : ''}
+                  onClick={() => setActiveTab('time')}
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Süreler
+                </Button>
               </div>
             </div>
 
@@ -925,6 +996,46 @@ function TaskDetailDialogContent({
                           </div>
                         ))}
                     </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'time' && (
+                <div className="space-y-3">
+                  {timeEntries.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500">
+                      <Clock className="h-8 w-8 mx-auto mb-3 text-gray-400" />
+                      Bu görev için henüz kaydedilmiş süre yok.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>Toplam</span>
+                        <span className="font-semibold text-gray-800">
+                          {minutesToDisplay(timeEntries.reduce((s, e) => s + (e.minutes ?? 0), 0))}
+                        </span>
+                      </div>
+                      {timeEntries.map((entry) => {
+                        const user = users.find((u) => u.id === entry.userId);
+                        return (
+                          <div key={entry.id} className="rounded-lg border border-gray-200 p-3 flex items-center gap-3">
+                            <Avatar className="h-7 w-7 shrink-0" style={{ backgroundColor: user?.color ?? '#6161FF' }}>
+                              <AvatarFallback className="text-[10px] text-white">{user?.initials ?? '?'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-medium text-gray-700">{user?.name ?? entry.userId}</div>
+                              <div className="text-[11px] text-gray-400">
+                                {format(new Date(entry.startedAt), 'd MMM, HH:mm', { locale: tr })}
+                              </div>
+                              {entry.note && <div className="text-xs text-gray-500 mt-0.5">{entry.note}</div>}
+                            </div>
+                            <span className="font-mono text-sm font-semibold text-gray-800 shrink-0">
+                              {minutesToDisplay(entry.minutes ?? 0)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </>
                   )}
                 </div>
               )}

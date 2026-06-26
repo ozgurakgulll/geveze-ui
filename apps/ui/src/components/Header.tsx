@@ -24,9 +24,12 @@ import {
   Settings,
   Menu,
   AlertCircle,
+  Square,
+  Timer,
 } from 'lucide-react';
 import { STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
+import { useTimer, formatElapsed } from '@/contexts/TimerContext';
 import type { TaskStatus } from '@/types';
 import type { ViewType } from '@/types';
 
@@ -72,6 +75,7 @@ export function Header({
   onOverdueOnlyChange,
 }: HeaderProps) {
   const users = useUsers();
+  const { activeTimer, elapsedSeconds, stopTimer } = useTimer();
   const viewLabels: Record<ViewType, string> = {
     dashboard: 'Gösterge Paneli',
     table: 'Ana Tablo',
@@ -125,6 +129,34 @@ export function Header({
 
         {/* Right Section */}
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Aktif Timer göstergesi */}
+          {activeTimer && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
+              <Timer className="h-3.5 w-3.5 text-red-600" />
+              <div className="flex flex-col leading-none">
+                <span className="text-[10px] text-red-500 font-medium max-w-[80px] truncate hidden sm:block">
+                  {activeTimer.taskTitle}
+                </span>
+                <span className="text-xs font-mono font-semibold text-red-700">
+                  {formatElapsed(elapsedSeconds)}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-red-600 hover:bg-red-100 hover:text-red-700"
+                onClick={() => stopTimer()}
+                title="Durdur"
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </Button>
+            </div>
+          )}
+
           {/* Share Button - hidden on mobile */}
           <Button variant="outline" size="sm" className="hidden md:flex gap-2">
             <Share2 className="h-4 w-4" />
