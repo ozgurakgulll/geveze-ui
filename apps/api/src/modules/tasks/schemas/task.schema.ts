@@ -85,6 +85,22 @@ export class TaskModel {
   })
   attachments: TaskAttachment[];
 
+  @Prop({
+    type: [
+      {
+        id: { type: String, required: true },
+        authorId: { type: String, required: true },
+        authorName: { type: String, required: true },
+        authorInitials: { type: String, default: '' },
+        authorColor: { type: String, default: '#6161FF' },
+        text: { type: String, required: true },
+        createdAt: { type: String, required: true },
+      },
+    ],
+    default: [],
+  })
+  comments: import('@geveze/shared').TaskComment[];
+
   createdAt: Date;
   updatedAt: Date;
 }

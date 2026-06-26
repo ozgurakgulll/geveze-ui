@@ -1,5 +1,6 @@
 import type {
   Task,
+  TaskComment,
   User,
   PortfolioCompany,
   TaskStatus,
@@ -221,6 +222,20 @@ export const bulkReassignTasks = (
 
 export const bulkArchiveTasks = (ids: string[]): Promise<void> =>
   request<void>('/tasks/bulk/archive', { method: 'PATCH', body: JSON.stringify({ ids }) });
+
+// ─── Task Comments ────────────────────────────────────────────────────────────
+
+export const addTaskComment = (
+  taskId: string,
+  payload: Omit<TaskComment, 'id' | 'createdAt'>,
+): Promise<Task> =>
+  request<Task>(`/tasks/${taskId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const deleteTaskComment = (taskId: string, commentId: string): Promise<Task> =>
+  request<Task>(`/tasks/${taskId}/comments/${commentId}`, { method: 'DELETE' });
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 

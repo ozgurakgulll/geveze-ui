@@ -8,37 +8,20 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Image as ImageIcon, Mic, Smile, Send } from 'lucide-react';
+import { FileText, Image as ImageIcon, Mic, Smile, Send, Trash2 } from 'lucide-react';
 import { useUsers } from '@/contexts/UsersContext';
-import type { Task } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import * as api from '@/lib/api';
+import type { Task, TaskComment } from '@/types';
 import { format } from 'date-fns';
 
 interface TaskCommentsPanelProps {
   task: Task;
+  onTaskUpdate?: (updated: Task) => void;
   onCountChange?: (count: number) => void;
 }
 
 type Attachment = { id: string; name: string; type: 'file' | 'image' | 'audio'; url?: string };
-
-const buildInitialComments = (task: Task, userList: import('@/types').User[]) => {
-  const primary = task.assignee ?? userList[0];
-  const teammate = userList.find((u) => u.id !== primary?.id) ?? userList[1] ?? primary;
-  if (!primary || !teammate) return [];
-  return [
-    {
-      id: `${task.id}-c1`,
-      author: primary,
-      text: 'Brief netleşti, taslağa başlıyorum.',
-      createdAt: new Date(),
-    },
-    {
-      id: `${task.id}-c2`,
-      author: teammate,
-      text: 'Tamam, ilk taslağı görünce yorumlayacağım.',
-      createdAt: new Date(),
-    },
-  ];
-};
 
 const revokeAttachmentPreview = (attachment: Attachment) => {
   if (attachment.url) {
@@ -46,13 +29,21 @@ const revokeAttachmentPreview = (attachment: Attachment) => {
   }
 };
 
-export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProps) {
+export function TaskCommentsPanel({ task, onTaskUpdate, onCountChange }: TaskCommentsPanelProps) {
   const users = useUsers();
+  const { user: authUser } = useAuth();
   const [newComment, setNewComment] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [comments, setComments] = useState(() => buildInitialComments(task, users));
+  const [comments, setComments] = useState<TaskComment[]>(task.comments ?? []);
+  const [submitting, setSubmitting] = useState(false);
   const attachmentsRef = useRef<Attachment[]>([]);
+
+  // Sync when task.comments changes externally
+  useEffect(() => {
+    setComments(task.comments ?? []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task.id, task.comments?.length]);
 
   useEffect(() => {
     attachmentsRef.current = attachments;
@@ -68,26 +59,60 @@ export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProp
     onCountChange?.(comments.length);
   }, [comments.length, onCountChange]);
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     const text = newComment.trim();
-    if (!text && attachments.length === 0) return;
-    const author = users[0] ?? task.assignee;
-    if (!author) return;
-    setComments((prev) => [
-      ...prev,
-      {
-        id: `${task.id}-${Date.now()}`,
-        author,
-        text: text || 'Ek paylaşıldı.',
-        createdAt: new Date(),
-      },
-    ]);
+    if (!text || submitting) return;
+
+    const fallback = users[0];
+    const authorId = authUser?.id ?? fallback?.id ?? 'unknown';
+    const authorName = authUser?.name ?? fallback?.name ?? 'Kullanıcı';
+    const authorInitials = authUser?.initials ?? fallback?.initials ?? '?';
+    const authorColor = authUser?.color ?? fallback?.color ?? '#6161FF';
+
+    setSubmitting(true);
+    try {
+      const updated = await api.addTaskComment(task.id, {
+        authorId,
+        authorName,
+        authorInitials,
+        authorColor,
+        text,
+      });
+      setComments(updated.comments ?? []);
+      onTaskUpdate?.(updated);
+    } catch {
+      // optimistic fallback
+      const optimistic: TaskComment = {
+        id: `local-${Date.now()}`,
+        authorId,
+        authorName,
+        authorInitials,
+        authorColor,
+        text,
+        createdAt: new Date().toISOString(),
+      };
+      setComments((prev) => [...prev, optimistic]);
+    } finally {
+      setSubmitting(false);
+    }
+
     setNewComment('');
     setAttachments((prev) => {
       prev.forEach(revokeAttachmentPreview);
       return [];
     });
     setShowEmojiPicker(false);
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    try {
+      const updated = await api.deleteTaskComment(task.id, commentId);
+      setComments(updated.comments ?? []);
+      onTaskUpdate?.(updated);
+    } catch {
+      setComments(task.comments ?? []);
+    }
   };
 
   const handleFilesSelected = (files: FileList | null, kind: 'file' | 'image' | 'audio') => {
@@ -120,8 +145,7 @@ export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProp
     const atIndex = newComment.lastIndexOf('@');
     if (atIndex === -1) return;
     const before = newComment.slice(0, atIndex);
-    const nextText = `${before}@${name} `;
-    setNewComment(nextText);
+    setNewComment(`${before}@${name} `);
   };
 
   const handleRemoveAttachment = (attachment: Attachment) => {
@@ -129,24 +153,41 @@ export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProp
     setAttachments((prev) => prev.filter((item) => item.id !== attachment.id));
   };
 
+  const currentUserId = authUser?.id ?? users[0]?.id;
+
   return (
     <div className="flex flex-col h-full min-h-[280px]">
       <ScrollArea className="flex-1 min-h-0 pr-2">
         <div className="space-y-3">
+          {comments.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">Henüz yorum yok.</p>
+          )}
           {comments.map((comment) => (
-            <div key={comment.id} className="flex items-start gap-2">
+            <div key={comment.id} className="flex items-start gap-2 group">
               <Avatar
-                className="w-7 h-7 border-2 border-white"
-                style={{ backgroundColor: comment.author.color }}
+                className="w-7 h-7 border-2 border-white shrink-0"
+                style={{ backgroundColor: comment.authorColor }}
               >
                 <AvatarFallback className="text-[10px] font-medium text-white">
-                  {comment.author.initials}
+                  {comment.authorInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-gray-900">{comment.author.name}</div>
-                  <div className="text-xs text-gray-400">{format(comment.createdAt, 'HH:mm')}</div>
+                  <div className="text-sm font-medium text-gray-900">{comment.authorName}</div>
+                  <div className="text-xs text-gray-400">
+                    {format(new Date(comment.createdAt), 'HH:mm')}
+                  </div>
+                  {comment.authorId === currentUserId && (
+                    <button
+                      type="button"
+                      className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                      onClick={() => void handleDeleteComment(comment.id)}
+                      title="Yorumu sil"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
                 <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mt-1">
                   {comment.text}
@@ -226,7 +267,7 @@ export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProp
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                 e.preventDefault();
-                handleAddComment();
+                void handleAddComment();
               }
             }}
             rows={2}
@@ -276,8 +317,8 @@ export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProp
           <Button
             size="icon"
             className="bg-[#6161FF] hover:bg-[#5050E0] shrink-0"
-            onClick={handleAddComment}
-            disabled={!newComment.trim() && attachments.length === 0}
+            onClick={() => void handleAddComment()}
+            disabled={!newComment.trim() || submitting}
           >
             <Send className="h-4 w-4" />
           </Button>
@@ -298,12 +339,6 @@ export function TaskCommentsPanel({ task, onCountChange }: TaskCommentsPanelProp
           ))}
         </div>
       )}
-
-      <div className="shrink-0 flex items-center justify-between pt-2 mt-2">
-        <span className="text-xs text-gray-400">
-          Bu sadece arayüz önizlemesidir, kayıt yapılmaz.
-        </span>
-      </div>
     </div>
   );
 }

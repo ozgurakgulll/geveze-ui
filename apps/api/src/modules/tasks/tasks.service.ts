@@ -199,6 +199,40 @@ export class TasksService {
     return this.toTask(doc);
   }
 
+  async addComment(taskId: string, comment: {
+    authorId: string; authorName: string; authorInitials: string; authorColor: string; text: string;
+  }): Promise<Task> {
+    const id = `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const doc = await this.taskModel
+      .findByIdAndUpdate(
+        taskId,
+        {
+          $push: {
+            comments: { ...comment, id, createdAt: new Date().toISOString() },
+            activityLog: this.makeLog('Yorum eklendi', comment.text.slice(0, 60)),
+          },
+        },
+        { new: true },
+      )
+      .lean()
+      .exec();
+    if (!doc) throw new NotFoundException(`Task ${taskId} bulunamadı`);
+    return this.toTask(doc);
+  }
+
+  async removeComment(taskId: string, commentId: string): Promise<Task> {
+    const doc = await this.taskModel
+      .findByIdAndUpdate(
+        taskId,
+        { $pull: { comments: { id: commentId } } },
+        { new: true },
+      )
+      .lean()
+      .exec();
+    if (!doc) throw new NotFoundException(`Task ${taskId} bulunamadı`);
+    return this.toTask(doc);
+  }
+
   async removeAttachment(taskId: string, attachmentId: string): Promise<Task> {
     const doc = await this.taskModel
       .findByIdAndUpdate(

@@ -56,6 +56,7 @@ interface TaskDetailDialogProps {
   onRestoreFromArchive?: (taskId: string) => void;
   onAddAttachment?: (taskId: string, attachment: TaskAttachment) => void;
   onRemoveAttachment?: (taskId: string, attachmentId: string) => void;
+  onTaskUpdate?: (updated: Task) => void;
   availableTags?: string[];
   tagColorMap?: Record<string, string>;
   onAddTag?: (name: string, color?: string) => void;
@@ -129,6 +130,7 @@ interface TaskDetailDialogContentProps {
   onRestoreFromArchive?: (taskId: string) => void;
   onAddAttachment?: (taskId: string, attachment: TaskAttachment) => void;
   onRemoveAttachment?: (taskId: string, attachmentId: string) => void;
+  onTaskUpdate?: (updated: Task) => void;
   availableTags?: string[];
   tagColorMap?: Record<string, string>;
   onAddTag?: (name: string, color?: string) => void;
@@ -154,6 +156,7 @@ function TaskDetailDialogContent({
   onRestoreFromArchive,
   onAddAttachment,
   onRemoveAttachment,
+  onTaskUpdate,
   availableTags: availableTagsProp = [],
   tagColorMap = {},
   onAddTag,
@@ -820,7 +823,7 @@ function TaskDetailDialogContent({
 
             {activeTab === 'updates' ? (
               <div className="flex flex-col min-h-0 px-6 py-5 md:flex-1 overflow-hidden">
-                <TaskCommentsPanel key={task.id} task={task} />
+                <TaskCommentsPanel key={task.id} task={task} onTaskUpdate={onTaskUpdate} />
               </div>
             ) : (
             <ScrollArea className="min-h-0 px-6 py-5 md:flex-1">
@@ -994,6 +997,7 @@ export function TaskDetailDialog({
   onRestoreFromArchive,
   onAddAttachment,
   onRemoveAttachment,
+  onTaskUpdate,
   availableTags = [],
   tagColorMap = {},
   onAddTag,
@@ -1017,6 +1021,7 @@ export function TaskDetailDialog({
       onRestoreFromArchive={onRestoreFromArchive}
       onAddAttachment={onAddAttachment}
       onRemoveAttachment={onRemoveAttachment}
+      onTaskUpdate={onTaskUpdate}
       availableTags={availableTags}
       tagColorMap={tagColorMap}
       onAddTag={onAddTag}

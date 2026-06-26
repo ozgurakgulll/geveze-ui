@@ -1151,6 +1151,10 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
     [users]
   );
 
+  const handleTaskUpdate = useCallback((updated: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  }, []);
+
   const handleCreateTask = useCallback(
     (taskData: {
       title: string;
@@ -1385,6 +1389,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         }}
         onAddAttachment={handleAddAttachment}
         onRemoveAttachment={handleRemoveAttachment}
+        onTaskUpdate={handleTaskUpdate}
         availableTags={tagList}
         tagColorMap={tagColorMap}
         onAddTag={handleAddTag}

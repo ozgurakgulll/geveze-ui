@@ -60,6 +60,16 @@ export interface TaskAttachment {
   uploadedAt: string;
 }
 
+export interface TaskComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorInitials: string;
+  authorColor: string;
+  text: string;
+  createdAt: string; // ISO
+}
+
 export interface SocialMediaAccount {
   platform: string;
   handle: string;
@@ -161,6 +171,7 @@ export interface Task {
   customFields?: Record<string, string>;
   activityLog?: ActivityLogItem[];
   attachments?: TaskAttachment[];
+  comments?: TaskComment[];
   archived?: boolean;
   deletedAt?: string | null;
 }

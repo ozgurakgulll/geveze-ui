@@ -53,6 +53,14 @@ class AddAttachmentDto {
   size: number;
 }
 
+class AddCommentDto {
+  @IsString() authorId: string;
+  @IsString() authorName: string;
+  @IsString() authorInitials: string;
+  @IsString() authorColor: string;
+  @IsString() text: string;
+}
+
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
@@ -148,5 +156,22 @@ export class TasksController {
     @Param('attachmentId') attachmentId: string,
   ): Promise<Task> {
     return this.tasksService.removeAttachment(taskId, attachmentId);
+  }
+
+  @Post(':id/comments')
+  addComment(
+    @Param('id') taskId: string,
+    @Body() dto: AddCommentDto,
+  ): Promise<Task> {
+    return this.tasksService.addComment(taskId, dto);
+  }
+
+  @Delete(':id/comments/:commentId')
+  @HttpCode(HttpStatus.OK)
+  removeComment(
+    @Param('id') taskId: string,
+    @Param('commentId') commentId: string,
+  ): Promise<Task> {
+    return this.tasksService.removeComment(taskId, commentId);
   }
 }
