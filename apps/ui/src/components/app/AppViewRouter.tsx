@@ -1,5 +1,6 @@
 import { lazy, Suspense, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useUsers } from '@/contexts/UsersContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   PortfolioCompany,
   PortfolioCompanyDraft,
@@ -150,6 +151,7 @@ export function AppViewRouter(props: AppViewRouterProps) {
   } = props;
 
   const users = useUsers();
+  const { user: authUser } = useAuth();
 
   let content: ReactNode;
   switch (currentView) {
@@ -257,7 +259,8 @@ export function AppViewRouter(props: AppViewRouterProps) {
       );
       break;
     case 'person': {
-      const selected = users.find((u) => u.id === selectedPersonId) ?? users[0];
+      const effectivePersonId = selectedPersonId ?? authUser?.id;
+      const selected = users.find((u) => u.id === effectivePersonId) ?? users[0];
       content = selected ? (
         <PersonView
           user={selected}

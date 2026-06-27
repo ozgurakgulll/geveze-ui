@@ -24,6 +24,11 @@ export class PortfolioController {
     return this.portfolioService.findAll();
   }
 
+  @Get('deleted')
+  findDeleted(): Promise<PortfolioCompany[]> {
+    return this.portfolioService.findDeleted();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string): Promise<PortfolioCompany> {
     return this.portfolioService.findById(id);
@@ -46,6 +51,17 @@ export class PortfolioController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {
     return this.portfolioService.remove(id);
+  }
+
+  @Delete(':id/permanent')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  permanentDelete(@Param('id') id: string): Promise<void> {
+    return this.portfolioService.permanentDelete(id);
+  }
+
+  @Patch(':id/restore')
+  restore(@Param('id') id: string): Promise<PortfolioCompany> {
+    return this.portfolioService.restore(id);
   }
 
   @Patch(':id/contacts')

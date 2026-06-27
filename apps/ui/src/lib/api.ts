@@ -315,6 +315,15 @@ export const updatePortfolioCompany = (id: string, data: unknown): Promise<Portf
 export const deletePortfolioCompany = (id: string): Promise<void> =>
   request<void>(`/portfolio/${id}`, { method: 'DELETE' });
 
+export const permanentDeletePortfolioCompany = (id: string): Promise<void> =>
+  request<void>(`/portfolio/${id}/permanent`, { method: 'DELETE' });
+
+export const restorePortfolioCompany = (id: string): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>(`/portfolio/${id}/restore`, { method: 'PATCH' });
+
+export const getDeletedPortfolioCompanies = (): Promise<PortfolioCompany[]> =>
+  request<PortfolioCompany[]>('/portfolio/deleted');
+
 export const updatePortfolioContacts = (id: string, contacts: CompanyContact[]): Promise<PortfolioCompany> =>
   request<PortfolioCompany>(`/portfolio/${id}/contacts`, {
     method: 'PATCH',

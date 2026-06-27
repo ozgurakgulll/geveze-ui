@@ -60,6 +60,9 @@ export class PortfolioCompanyModel {
   @Prop({ type: [Object], default: [] })
   activityLog: ActivityLogItem[];
 
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+
   createdAt: Date;
   updatedAt: Date;
 }

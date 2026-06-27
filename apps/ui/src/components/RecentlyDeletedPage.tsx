@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Trash2, Undo2, AlertTriangle, Clock } from 'lucide-react';
+import { Trash2, Undo2, AlertTriangle, Clock, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels } from '@/lib/constants';
-import type { Task } from '@/types';
+import type { PortfolioCompany, Task } from '@/types';
 import { format, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -25,6 +25,9 @@ interface RecentlyDeletedPageProps {
   onPermanentDelete?: (taskId: string) => void;
   onBulkRestore: (ids: string[]) => void;
   onBulkPermanentDelete: (ids: string[]) => void;
+  deletedCompanies?: PortfolioCompany[];
+  onRestoreCompany?: (id: string) => void;
+  onPermanentDeleteCompany?: (id: string) => void;
 }
 
 function daysRemaining(deletedAt: string | null | undefined): number {
@@ -43,10 +46,14 @@ export function RecentlyDeletedPage({
   onRestore,
   onBulkRestore,
   onBulkPermanentDelete,
+  deletedCompanies = [],
+  onRestoreCompany,
+  onPermanentDeleteCompany,
 }: RecentlyDeletedPageProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteConfirmIds, setDeleteConfirmIds] = useState<string[] | null>(null);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const [companyDeleteConfirmId, setCompanyDeleteConfirmId] = useState<string | null>(null);
   const allSelected = tasks.length > 0 && selectedIds.length === tasks.length;
   const someSelected = selectedIds.length > 0;
 
@@ -221,6 +228,76 @@ export function RecentlyDeletedPage({
           </div>
         )}
       </div>
+
+      {/* Silinen Portföy Şirketleri */}
+      {deletedCompanies.length > 0 && (
+        <div className="mx-auto max-w-4xl space-y-3 mt-6">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-gray-400" />
+            <h2 className="text-base font-semibold text-gray-700">Silinen Portföy Şirketleri</h2>
+          </div>
+          <ul className="space-y-2">
+            {deletedCompanies.map((c) => (
+              <li key={c.id}>
+                <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm hover:border-gray-200 hover:shadow-md transition-all">
+                  <div className="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                    <Building2 className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-800 line-through decoration-gray-400">{c.name}</p>
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {c.deletedAt
+                        ? format(new Date(c.deletedAt as string), 'd MMM yyyy', { locale: tr }) + ' silindi'
+                        : 'Silindi'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onRestoreCompany && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-[#6161FF] hover:bg-[#6161FF]/10"
+                        onClick={() => onRestoreCompany(c.id)}
+                      >
+                        <Undo2 className="h-3.5 w-3.5 mr-1" />Geri Al
+                      </Button>
+                    )}
+                    {onPermanentDeleteCompany && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-red-600 hover:bg-red-50"
+                        onClick={() => setCompanyDeleteConfirmId(c.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <AlertDialog open={companyDeleteConfirmId !== null} onOpenChange={(o) => !o && setCompanyDeleteConfirmId(null)}>
+        <AlertDialogContent className="rounded-xl border-gray-200 shadow-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Şirket kalıcı silinsin mi?</AlertDialogTitle>
+            <AlertDialogDescription>Bu işlem geri alınamaz.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={(e) => { e.preventDefault(); if (companyDeleteConfirmId) { onPermanentDeleteCompany?.(companyDeleteConfirmId); setCompanyDeleteConfirmId(null); } }}
+            >
+              Kalıcı Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteConfirmIds !== null} onOpenChange={(o) => !o && setDeleteConfirmIds(null)}>
         <AlertDialogContent className="rounded-xl border-gray-200 shadow-lg">

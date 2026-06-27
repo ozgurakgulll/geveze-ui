@@ -452,6 +452,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const [tasks, setTasks] = useState<Task[]>([]);
   const [deletedTasks, setDeletedTasks] = useState<Task[]>([]);
   const [portfolioCompaniesState, setPortfolioCompaniesState] = useState<PortfolioCompany[]>([]);
+  const [deletedCompanies, setDeletedCompanies] = useState<PortfolioCompany[]>([]);
   const [tagEntries, setTagEntries] = useState<{ id: string; name: string; color: string }[]>([]);
   const [serviceTypeEntries, setServiceTypeEntries] = useState<{ id: string; name: string }[]>([]);
   const [appSettings, setAppSettings] = useState<Record<string, unknown>>({});
@@ -510,12 +511,14 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
           fetchedPortfolio.map((c) => normalizePortfolioCompany(c) ?? c)
         );
         setAppSettings(fetchedSettings);
-        const [fetchedTasks, fetchedDeleted] = await Promise.all([
+        const [fetchedTasks, fetchedDeleted, fetchedDeletedCompanies] = await Promise.all([
           api.getTasks(fetchedUsers, { workspaceId }),
           api.getDeletedTasks(fetchedUsers, workspaceId),
+          api.getDeletedPortfolioCompanies(),
         ]);
         setTasks(fetchedTasks);
         setDeletedTasks(fetchedDeleted);
+        setDeletedCompanies(fetchedDeletedCompanies.map((c) => normalizePortfolioCompany(c) ?? c));
       })
       .catch(() => {
         toast.error('API bağlantı hatası — veriler yüklenemedi', {
@@ -837,19 +840,42 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         toast.error('Portföy kaydı silme yetkiniz yok.');
         return;
       }
+      const company = portfolioCompaniesState.find((c) => c.id === companyId);
       api
         .deletePortfolioCompany(companyId)
         .then(() => {
           setPortfolioCompaniesState((prev) => prev.filter((c) => c.id !== companyId));
+          if (company) {
+            setDeletedCompanies((prev) => [{ ...company, deletedAt: new Date().toISOString() } as PortfolioCompany, ...prev]);
+          }
           if (selectedPortfolioCompanyId === companyId) {
             setSelectedPortfolioCompanyId(null);
           }
-          toast.success('Portföy kaydı silindi');
+          toast.success('Portföy kaydı çöp kutusuna taşındı');
         })
         .catch(() => toast.error('Portföy kaydı silinemedi'));
     },
-    [canManagePortfolio, selectedPortfolioCompanyId]
+    [canManagePortfolio, selectedPortfolioCompanyId, portfolioCompaniesState]
   );
+
+  const handleRestorePortfolioCompany = useCallback((companyId: string) => {
+    api.restorePortfolioCompany(companyId)
+      .then((restored) => {
+        setDeletedCompanies((prev) => prev.filter((c) => c.id !== companyId));
+        setPortfolioCompaniesState((prev) => [...prev, normalizePortfolioCompany(restored) ?? restored].sort((a, b) => a.name.localeCompare(b.name, 'tr')));
+        toast.success('Portföy kaydı geri alındı');
+      })
+      .catch(() => toast.error('Geri alma başarısız'));
+  }, []);
+
+  const handlePermanentDeletePortfolioCompany = useCallback((companyId: string) => {
+    api.permanentDeletePortfolioCompany(companyId)
+      .then(() => {
+        setDeletedCompanies((prev) => prev.filter((c) => c.id !== companyId));
+        toast.success('Portföy kaydı kalıcı olarak silindi');
+      })
+      .catch(() => toast.error('Kalıcı silme başarısız'));
+  }, []);
 
   const handleOpenTaskDetail = useCallback((taskId: string) => {
     setSelectedTaskId(taskId);
@@ -1381,6 +1407,9 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               onPermanentDelete={handlePermanentDeleteTask}
               onBulkRestore={handleBulkRestoreFromTrash}
               onBulkPermanentDelete={handleBulkPermanentDelete}
+              deletedCompanies={deletedCompanies}
+              onRestoreCompany={handleRestorePortfolioCompany}
+              onPermanentDeleteCompany={handlePermanentDeletePortfolioCompany}
             />
           ) : currentView === 'users' ? (
             <UsersManagementView

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nest start --watch",
+    "dev:debug": "nest start --debug --watch",
     "build": "nest build",
     "start": "node dist/apps/api/src/main",
     "typecheck": "tsc --noEmit",

@@ -13,9 +13,19 @@ export class PortfolioService {
   ) {}
 
   async findAll(): Promise<PortfolioCompany[]> {
-    // Portföy global — çalışma alanından bağımsız tüm şirketler listelenir
-    const docs = await this.model.find({}).sort({ name: 1 }).lean().exec();
+    const docs = await this.model.find({ deletedAt: null }).sort({ name: 1 }).lean().exec();
     return docs.map(this.toCompany);
+  }
+
+  async findDeleted(): Promise<PortfolioCompany[]> {
+    const docs = await this.model.find({ deletedAt: { $ne: null } }).sort({ deletedAt: -1 }).lean().exec();
+    return docs.map(this.toCompany);
+  }
+
+  async restore(id: string): Promise<PortfolioCompany> {
+    const doc = await this.model.findByIdAndUpdate(id, { $set: { deletedAt: null } }, { new: true }).lean().exec();
+    if (!doc) throw new NotFoundException(`Portfolio company ${id} bulunamadı`);
+    return this.toCompany(doc);
   }
 
   async findById(id: string): Promise<PortfolioCompany> {
@@ -60,6 +70,11 @@ export class PortfolioService {
   }
 
   async remove(id: string): Promise<void> {
+    const result = await this.model.findByIdAndUpdate(id, { $set: { deletedAt: new Date() } }).exec();
+    if (!result) throw new NotFoundException(`Portfolio company ${id} bulunamadı`);
+  }
+
+  async permanentDelete(id: string): Promise<void> {
     const result = await this.model.findByIdAndDelete(id).exec();
     if (!result) throw new NotFoundException(`Portfolio company ${id} bulunamadı`);
   }

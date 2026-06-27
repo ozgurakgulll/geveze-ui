@@ -304,6 +304,9 @@ export interface PortfolioCompany {
   monthlyContentCalendar: ContentCalendarItem[];
   notes: string[];
   activityLog: ActivityLogItem[];
+  deletedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PortfolioCompanyDraft {
