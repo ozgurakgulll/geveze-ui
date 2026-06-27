@@ -14,9 +14,7 @@ async function bootstrap(): Promise<void> {
   );
 
   app.enableCors({
-    origin: process.env['UI_ORIGIN']
-      ? process.env['UI_ORIGIN'].split(',')
-      : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'],
+    origin: true,   // request origin'ini olduğu gibi yansıt (internal tool)
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });

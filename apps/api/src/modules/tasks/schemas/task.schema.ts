@@ -42,6 +42,9 @@ export class TaskModel {
   portfolioCompanyName?: string;
 
   @Prop({ type: Date })
+  startDate?: Date;
+
+  @Prop({ type: Date })
   dueDate?: Date;
 
   @Prop({ type: Number, default: 0, min: 0, max: 100 })

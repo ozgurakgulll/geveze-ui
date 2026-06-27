@@ -293,6 +293,7 @@ export class TasksService {
     // ISO string tarihleri Date nesnesine çevir
     if (typeof task.createdAt === 'string') task.createdAt = new Date(task.createdAt);
     if (typeof task.updatedAt === 'string') task.updatedAt = new Date(task.updatedAt);
+    if (typeof task.startDate === 'string') task.startDate = new Date(task.startDate);
     if (typeof task.dueDate === 'string') task.dueDate = new Date(task.dueDate);
     return task;
   }

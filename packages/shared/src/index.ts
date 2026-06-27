@@ -239,11 +239,13 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: Priority;
+  workspaceId?: string;
   assignee?: User;
   assigneeId?: string;
   assigneeName?: string;
   portfolioCompanyId?: string;
   portfolioCompanyName?: string;
+  startDate?: Date;
   dueDate?: Date;
   tags: string[];
   progress: number;

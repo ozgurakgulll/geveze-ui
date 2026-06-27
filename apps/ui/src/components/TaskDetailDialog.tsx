@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskCommentsPanel } from '@/components/TaskCommentsPanel';
 import { PRIORITY_COLORS as priorityColors, PRIORITY_LABELS as priorityLabels, STATUS_LABELS as statusLabels } from '@/lib/constants';
 import { useUsers } from '@/contexts/UsersContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type { CustomColumnType, Priority, TableColumnSchemaItem, Task, TaskStatus, TaskAttachment } from '@/types';
-import { DocumentUploadDialog } from '@/components/DocumentUploadDialog';
 import {
   Archive,
   Calendar,
@@ -21,11 +22,8 @@ import {
   MessageSquare,
   Trash2,
   Undo2,
-  Upload,
   X,
   Plus,
-  Play,
-  Square,
   Clock,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -81,9 +79,9 @@ const createDraft = (task: Task) => ({
   description: task.description ?? '',
   status: task.status,
   priority: task.priority,
-  assigneeId: task.assignee?.id ?? '',
+  assigneeId: task.assignee?.id ?? task.assigneeId ?? '',
   portfolioCompanyId: task.portfolioCompanyId ?? '',
-  startDate: task.createdAt ? format(task.createdAt, 'yyyy-MM-dd') : '',
+  startDate: task.startDate ? format(task.startDate, 'yyyy-MM-dd') : (task.createdAt ? format(task.createdAt, 'yyyy-MM-dd') : ''),
   dueDate: task.dueDate ? format(task.dueDate, 'yyyy-MM-dd') : '',
   progress: task.progress,
   tagsInput: task.tags.join(', '),
@@ -123,6 +121,15 @@ const getInitialDialogSize = () => {
     height: Math.min(DIALOG_MAX_HEIGHT, maxHeight),
   };
 };
+
+function fileToBase64(file: globalThis.File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 interface TaskDetailDialogContentProps {
   open: boolean;
@@ -171,9 +178,11 @@ function TaskDetailDialogContent({
   presentation = 'dialog',
 }: TaskDetailDialogContentProps) {
   const users = useUsers();
+  const { user: authUser } = useAuth();
   const { activeTimer, elapsedSeconds, startTimer, stopTimer } = useTimer();
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const isTimerOnThisTask = activeTimer?.taskId === task.id;
+  const isAssignedToMe = task.assigneeId === authUser?.id;
 
   useEffect(() => {
     if (open) {
@@ -181,24 +190,87 @@ function TaskDetailDialogContent({
     }
   }, [open, task.id]);
 
+  // Dialog açıldığında: görev zaten sayılması gereken durumdaysa timer başlat
+  useEffect(() => {
+    if (!open || !isAssignedToMe) return;
+    const currentStatus = task.status;
+    const shouldRun = currentStatus === 'in-progress' || currentStatus === 'revision';
+    if (!shouldRun || isTimerOnThisTask) return;
+
+    if (activeTimer) {
+      // Başka bir görev sayılıyor → switch
+      void handleSwitchTimer();
+    } else {
+      void handleStartTimer();
+    }
+    // Sadece dialog açıldığında veya task değiştiğinde çalış
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, task.id]);
+
   const handleStartTimer = async () => {
-    await startTimer(task.id, task.title);
+    try {
+      await startTimer(task.id, task.title, task.workspaceId, task.portfolioCompanyId);
+    } catch (err) {
+      toast.error('Zamanlayıcı başlatılamadı', {
+        description: err instanceof Error ? err.message : 'Beklenmeyen hata',
+      });
+    }
   };
 
   const handleStopTimer = async () => {
-    const entry = await stopTimer();
-    if (entry) setTimeEntries((prev) => [entry, ...prev]);
+    try {
+      const entry = await stopTimer();
+      if (entry) setTimeEntries((prev) => [entry, ...prev]);
+    } catch {
+      toast.error('Zamanlayıcı durdurulamadı');
+    }
+  };
+
+  // Başka bir görevin timer'ı çalışıyorsa onu durdurup bu görevi başlat
+  const handleSwitchTimer = async () => {
+    try {
+      const prevTitle = activeTimer?.taskTitle ?? 'önceki görev';
+      const entry = await stopTimer();
+      if (entry) setTimeEntries((prev) => [entry, ...prev]);
+      await startTimer(task.id, task.title, task.workspaceId, task.portfolioCompanyId);
+      toast.success(`"${prevTitle}" için süre kaydedildi`);
+    } catch (err) {
+      toast.error('Zamanlayıcı değiştirilemedi', {
+        description: err instanceof Error ? err.message : 'Beklenmeyen hata',
+      });
+    }
   };
 
   const initialDraft = createDraft(task);
   const baseTags = availableTagsProp.length > 0 ? availableTagsProp : FALLBACK_TAGS;
   const [activeTab, setActiveTab] = useState<TaskDetailTab>('updates');
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const customCols = tableColumnSchema.filter((c) => c.type && c.type !== 'base');
   const [title, setTitle] = useState(initialDraft.title);
   const [description, setDescription] = useState(initialDraft.description);
   const [status, setStatus] = useState<TaskStatus>(initialDraft.status);
   const [priority, setPriority] = useState<Priority>(initialDraft.priority);
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const data = await fileToBase64(file);
+      const attachment: TaskAttachment = {
+        id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data,
+        uploadedAt: new Date().toISOString(),
+      };
+      onAddAttachment?.(task.id, attachment);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [onAddAttachment, task.id]
+  );
   const [assigneeId, setAssigneeId] = useState(initialDraft.assigneeId);
   const [portfolioCompanyId, setPortfolioCompanyId] = useState(initialDraft.portfolioCompanyId);
   const [startDate, setStartDate] = useState(initialDraft.startDate);
@@ -281,6 +353,25 @@ function TaskDetailDialogContent({
   const handleStatusChange = (nextStatus: TaskStatus) => {
     setStatus(nextStatus);
     setProgress((prev) => getTaskProgress({ status: nextStatus, priority, progress: prev }));
+
+    if (!isAssignedToMe) return;
+
+    const shouldRun = nextStatus === 'in-progress' || nextStatus === 'revision';
+
+    if (shouldRun) {
+      if (isTimerOnThisTask) {
+        // Zaten bu görev için sayıyor — dokunma
+      } else if (activeTimer) {
+        // Başka bir görev sayılıyor → otomatik switch
+        void handleSwitchTimer();
+      } else {
+        // Timer yok → başlat
+        void handleStartTimer();
+      }
+    } else if (isTimerOnThisTask) {
+      // İnceleme / Planlandı / Tamamlandı → durdur
+      void handleStopTimer();
+    }
   };
 
   const handlePriorityChange = (nextPriority: Priority) => {
@@ -524,41 +615,17 @@ function TaskDetailDialogContent({
                   </select>
                 </div>
 
-                {/* Zamanlayıcı — sadece in-progress görevde görünür */}
-                {status === 'in-progress' && (
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 mb-1">Süre Takibi</div>
-                    {isTimerOnThisTask ? (
-                      <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-red-200 bg-red-50">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                        </span>
-                        <span className="font-mono text-sm font-semibold text-red-700 flex-1">
-                          {formatElapsed(elapsedSeconds)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-100 px-2"
-                          onClick={handleStopTimer}
-                        >
-                          <Square className="h-3 w-3 fill-current" />
-                          Durdur
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        className="w-full h-10 gap-2 text-[#6161FF] border-[#6161FF]/30 hover:bg-[#6161FF]/5"
-                        onClick={handleStartTimer}
-                        disabled={!!activeTimer}
-                        title={activeTimer ? 'Önce aktif zamanlayıcıyı durdurun' : 'Zamanlayıcıyı başlat'}
-                      >
-                        <Play className="h-4 w-4 fill-current" />
-                        {activeTimer ? 'Başka görev çalışıyor...' : 'Zamanlayıcıyı Başlat'}
-                      </Button>
-                    )}
+                {/* Timer göstergesi — bana atanmış ve aktif görev için */}
+                {isAssignedToMe && isTimerOnThisTask && (
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-red-200 bg-red-50">
+                    <span className="relative flex h-2 w-2 flex-shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-red-700">
+                      {formatElapsed(elapsedSeconds)}
+                    </span>
+                    <span className="text-xs text-red-500 ml-auto">Sayıyor</span>
                   </div>
                 )}
 
@@ -902,20 +969,23 @@ function TaskDetailDialogContent({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">Belgeler</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-[#6161FF] border-[#6161FF]/30 hover:bg-[#6161FF]/5"
-                      onClick={() => setIsUploadDialogOpen(true)}
-                    >
-                      <Upload className="h-4 w-4" />
-                      Belge Ekle
-                    </Button>
                   </div>
                   {(task.attachments ?? []).length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500">
+                    <div
+                      className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500 cursor-pointer hover:bg-gray-50"
+                      role="button"
+                      tabIndex={0}
+                      onDoubleClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                    >
                       <FileText className="h-8 w-8 mx-auto mb-3 text-gray-400" />
-                      Bu görev için henüz belge yok.
+                      <p>Bu görev için henüz belge yok.</p>
+                      <p className="mt-2 text-xs text-gray-400">Dosyayı seçmek için çift tıklayın.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -943,14 +1013,12 @@ function TaskDetailDialogContent({
                       ))}
                     </div>
                   )}
-                  <DocumentUploadDialog
-                    open={isUploadDialogOpen}
-                    onClose={() => setIsUploadDialogOpen(false)}
-                    taskTitle={task.title}
-                    onUpload={(attachment) => {
-                      onAddAttachment?.(task.id, attachment);
-                      setIsUploadDialogOpen(false);
-                    }}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.svg"
+                    onChange={handleFileSelect}
                   />
                 </div>
               )}

@@ -42,6 +42,7 @@ import { getTaskProgress } from '@/lib/taskProgress';
 import { isTaskOverdue } from '@/lib/taskOverdue';
 import * as api from '@/lib/api';
 import { UsersProvider } from '@/contexts/UsersContext';
+import { useTimer } from '@/contexts/TimerContext';
 import {
   OLD_CUSTOM_COLUMNS_KEY,
   TABLE_SCHEMA_STORAGE_KEY,
@@ -413,6 +414,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const location = useLocation();
   const { setCurrentWorkspaceById } = useWorkspace();
+  const { activeTimer, startTimer: timerStart, stopTimer: timerStop } = useTimer();
 
   // URL'deki son segment'ten view'ı türet
   const viewFromUrl = useMemo((): ViewType => {
@@ -657,7 +659,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       api
         .updateTask(
           taskId,
-          { createdAt: startDate.toISOString(), dueDate: dueDate.toISOString(), activityLog: [entry] },
+          { startDate: startDate.toISOString(), dueDate: dueDate.toISOString(), activityLog: [entry] },
           users
         )
         .then((updated) => {
@@ -910,7 +912,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
             assigneeName: assignee?.name,
             portfolioCompanyId: portfolioCompany?.id,
             portfolioCompanyName: portfolioCompany?.name,
-            ...(payload.startDate && { createdAt: payload.startDate.toISOString() }),
+            ...(payload.startDate && { startDate: payload.startDate.toISOString() }),
             dueDate: payload.dueDate?.toISOString(),
             progress: payload.progress,
             tags: payload.tags,
@@ -1020,10 +1022,29 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         .then((updated) => {
           setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
           toast.success('Durum güncellendi');
+          // Bana atanmış görevde otomatik timer yönetimi
+          if (task.assigneeId === authUser?.id) {
+            const shouldRun = status === 'in-progress' || status === 'revision';
+            const isThisTaskTimer = activeTimer?.taskId === task.id;
+            if (shouldRun) {
+              if (isThisTaskTimer) {
+                // Zaten sayıyor
+              } else if (activeTimer) {
+                // Başka görev sayılıyor → durdur ve başlat
+                timerStop().then(() =>
+                  timerStart(task.id, task.title, task.workspaceId, task.portfolioCompanyId)
+                ).catch(() => {});
+              } else {
+                void timerStart(task.id, task.title, task.workspaceId, task.portfolioCompanyId);
+              }
+            } else if (isThisTaskTimer) {
+              void timerStop();
+            }
+          }
         })
         .catch(() => toast.error('Durum güncellenemedi'));
     },
-    [tasks, users]
+    [tasks, users, authUser, activeTimer, timerStart, timerStop]
   );
 
   const handleTableTaskDescriptionCommit = useCallback(
@@ -1199,8 +1220,10 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   );
 
   const handleTaskUpdate = useCallback((updated: Task) => {
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-  }, []);
+    // API'den gelen ham nesneyi re-parse et (tarihler string gelebilir)
+    const parsed = api.parseApiTask(updated as unknown as Record<string, unknown>, users);
+    setTasks((prev) => prev.map((t) => (t.id === parsed.id ? parsed : t)));
+  }, [users]);
 
   const handleCreateTask = useCallback(
     (taskData: {

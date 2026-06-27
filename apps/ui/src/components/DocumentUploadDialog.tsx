@@ -81,7 +81,11 @@ export function DocumentUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-md" onClick={(e) => e.stopPropagation()}>
+      <DialogContent
+        className="max-w-md"
+        style={{ '--tw-enter-scale': 0.75 } as React.CSSProperties}
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>Belge Ekle</DialogTitle>
           {taskTitle && (

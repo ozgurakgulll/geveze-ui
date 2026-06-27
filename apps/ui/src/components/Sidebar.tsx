@@ -276,6 +276,43 @@ export function Sidebar({
             collapsed={effectiveCollapsed}
           />
 
+          <SectionLabel label="Yönetim" collapsed={effectiveCollapsed} />
+
+          {isManager && (
+            <NavItem
+              icon={Users}
+              label="Kullanıcılar"
+              active={currentView === 'users'}
+              onClick={() => onViewChange('users')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          {canViewArchive && (
+            <NavItem
+              icon={Archive}
+              label="Arşiv"
+              active={currentView === 'archive'}
+              onClick={() => onViewChange('archive')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          {canViewTrash && (
+            <NavItem
+              icon={Trash2}
+              label="Son Silinenler"
+              active={currentView === 'trash'}
+              onClick={() => onViewChange('trash')}
+              collapsed={effectiveCollapsed}
+            />
+          )}
+          <NavItem
+            icon={Settings}
+            label="Alan Ayarları"
+            active={currentView === 'settings'}
+            onClick={() => onViewChange('settings')}
+            collapsed={effectiveCollapsed}
+          />
+
           {/* ── EKİP ── */}
           {!effectiveCollapsed ? (
             <>
@@ -291,7 +328,7 @@ export function Sidebar({
                 </div>
               </button>
               {isEkipExpanded && (
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 max-h-[280px] overflow-y-auto pr-1">
                   {users.map((user) => (
                     <button
                       key={user.id}
@@ -331,44 +368,6 @@ export function Sidebar({
               ))}
             </div>
           )}
-
-          {/* ── YÖNETİM ── */}
-          <SectionLabel label="Yönetim" collapsed={effectiveCollapsed} />
-
-          {isManager && (
-            <NavItem
-              icon={Users}
-              label="Kullanıcılar"
-              active={currentView === 'users'}
-              onClick={() => onViewChange('users')}
-              collapsed={effectiveCollapsed}
-            />
-          )}
-          {canViewArchive && (
-            <NavItem
-              icon={Archive}
-              label="Arşiv"
-              active={currentView === 'archive'}
-              onClick={() => onViewChange('archive')}
-              collapsed={effectiveCollapsed}
-            />
-          )}
-          {canViewTrash && (
-            <NavItem
-              icon={Trash2}
-              label="Son Silinenler"
-              active={currentView === 'trash'}
-              onClick={() => onViewChange('trash')}
-              collapsed={effectiveCollapsed}
-            />
-          )}
-          <NavItem
-            icon={Settings}
-            label="Alan Ayarları"
-            active={currentView === 'settings'}
-            onClick={() => onViewChange('settings')}
-            collapsed={effectiveCollapsed}
-          />
         </div>
       </ScrollArea>
 
@@ -392,11 +391,11 @@ export function Sidebar({
                 'h-8 w-8 ml-auto rounded-full flex-shrink-0',
                 effectiveCollapsed && 'ml-0'
               )}
-              style={{ backgroundColor: users[0]?.color ?? '#6161FF' }}
+              style={{ backgroundColor: users.find(u => u.id === authUser?.id)?.color ?? '#6161FF' }}
             >
-              <AvatarFallback className="text-xs font-medium text-white rounded-full flex items-center justify-center w-full h-full">
-                {users[0]?.initials ?? authUser?.name?.charAt(0) ?? 'K'}
-              </AvatarFallback>
+              <span className="text-xs font-medium text-white">
+                {users.find(u => u.id === authUser?.id)?.initials ?? authUser?.name?.charAt(0) ?? 'K'}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top">
