@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -24,12 +24,15 @@ const PERMISSION_LABELS: { key: keyof UserPermissions; label: string; descriptio
 ];
 
 export function PermissionsSheet({ user, open, onClose, onSave }: PermissionsSheetProps) {
-  const [perms, setPerms] = useState<UserPermissions>(() =>
+  const [perms, setPerms] = useState<UserPermissions>(
     user?.permissions ?? DEFAULT_MEMBER_PERMISSIONS
   );
   const [saving, setSaving] = useState(false);
 
-  // Reset when user changes
+  useEffect(() => {
+    setPerms(user?.permissions ?? DEFAULT_MEMBER_PERMISSIONS);
+  }, [user]);
+
   const currentPerms = user?.permissions ?? DEFAULT_MEMBER_PERMISSIONS;
 
   const handleToggle = (key: keyof UserPermissions) => {
@@ -53,12 +56,6 @@ export function PermissionsSheet({ user, open, onClose, onSave }: PermissionsShe
       onClose();
     }
   };
-
-  // Sync perms when user prop changes
-  if (user && JSON.stringify(perms) === JSON.stringify(DEFAULT_MEMBER_PERMISSIONS) &&
-      user.permissions && JSON.stringify(user.permissions) !== JSON.stringify(perms)) {
-    setPerms(user.permissions);
-  }
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>

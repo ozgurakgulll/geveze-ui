@@ -172,6 +172,7 @@ export async function createTask(
     description?: string;
     status: string;
     priority: string;
+    workspaceId?: string;
     assigneeId?: string;
     assigneeName?: string;
     portfolioCompanyId?: string;

@@ -158,6 +158,10 @@ export class TimeEntriesService {
         { $match: match },
         { $group: { _id: '$userId', minutes: { $sum: '$minutes' } } },
         { $sort: { minutes: -1 } },
+        { $addFields: { userIdObj: { $toObjectId: '$_id' } } },
+        { $lookup: { from: 'users', localField: 'userIdObj', foreignField: '_id', as: 'userDoc' } },
+        { $addFields: { userName: { $ifNull: [{ $arrayElemAt: ['$userDoc.name', 0] }, '$_id'] } } },
+        { $project: { userDoc: 0, userIdObj: 0 } },
       ]),
       this.model.aggregate([
         { $match: match },
@@ -169,6 +173,10 @@ export class TimeEntriesService {
         { $match: { ...match, portfolioCompanyId: { $exists: true, $ne: null } } },
         { $group: { _id: '$portfolioCompanyId', minutes: { $sum: '$minutes' } } },
         { $sort: { minutes: -1 } },
+        { $addFields: { companyIdObj: { $toObjectId: '$_id' } } },
+        { $lookup: { from: 'portfolio_companies', localField: 'companyIdObj', foreignField: '_id', as: 'companyDoc' } },
+        { $addFields: { companyName: { $ifNull: [{ $arrayElemAt: ['$companyDoc.name', 0] }, '$_id'] } } },
+        { $project: { companyDoc: 0, companyIdObj: 0 } },
       ]),
       this.model.aggregate([
         { $match: match },
@@ -184,9 +192,9 @@ export class TimeEntriesService {
 
     return {
       totalMinutes: totalResult[0]?.total ?? 0,
-      byUser: (byUser as { _id: string; minutes: number }[]).map(r => ({
+      byUser: (byUser as { _id: string; userName: string; minutes: number }[]).map(r => ({
         userId: r._id,
-        userName: r._id,
+        userName: r.userName,
         minutes: r.minutes,
       })),
       byTask: (byTask as { _id: { taskId: string; taskTitle?: string }; minutes: number }[]).map(r => ({
@@ -194,9 +202,9 @@ export class TimeEntriesService {
         taskTitle: r._id.taskTitle ?? r._id.taskId,
         minutes: r.minutes,
       })),
-      byPortfolio: (byPortfolio as { _id: string; minutes: number }[]).map(r => ({
+      byPortfolio: (byPortfolio as { _id: string; companyName: string; minutes: number }[]).map(r => ({
         portfolioCompanyId: r._id,
-        portfolioCompanyName: r._id,
+        portfolioCompanyName: r.companyName,
         minutes: r.minutes,
       })),
       byDay: (byDay as { _id: string; minutes: number }[]).map(r => ({

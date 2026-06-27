@@ -26,6 +26,10 @@ export class CreateTaskDto {
 
   @IsOptional()
   @IsString()
+  workspaceId?: string;
+
+  @IsOptional()
+  @IsString()
   assigneeId?: string;
 
   @IsOptional()

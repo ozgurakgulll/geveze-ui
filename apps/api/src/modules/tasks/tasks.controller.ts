@@ -95,6 +95,11 @@ export class TasksController {
     return this.tasksService.findAll(filters);
   }
 
+  @Get('deleted')
+  findDeleted(): Promise<Task[]> {
+    return this.tasksService.findDeleted();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Task> {
     return this.tasksService.findById(id);
@@ -114,11 +119,6 @@ export class TasksController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {
     return this.tasksService.remove(id);
-  }
-
-  @Get('deleted')
-  findDeleted(): Promise<Task[]> {
-    return this.tasksService.findDeleted();
   }
 
   @Patch(':id/restore')

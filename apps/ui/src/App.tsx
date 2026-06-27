@@ -1247,6 +1247,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
             description: taskData.description || undefined,
             status: taskData.status,
             priority: taskData.priority,
+            workspaceId: workspaceId ?? undefined,
             assigneeId: assignee?.id,
             assigneeName: assignee?.name,
             portfolioCompanyId: portfolioCompany?.id,
