@@ -50,8 +50,6 @@ interface SidebarProps {
   companyName?: string;
   workspaceDescription?: string;
   embedded?: boolean;
-  searchQuery?: string;
-  onSearchChange?: (value: string) => void;
 }
 
 function NavItem({
@@ -107,8 +105,6 @@ export function Sidebar({
   companyName = 'Geveze',
   workspaceDescription: _workspaceDescription = 'Ajans iş takibi',
   embedded = false,
-  searchQuery = '',
-  onSearchChange,
 }: SidebarProps) {
   const navigate = useNavigate();
   const users = useUsers();
@@ -168,19 +164,6 @@ export function Sidebar({
 
       <ScrollArea className="flex-1">
         <div className="p-2 pb-4">
-          {/* Search */}
-          {!effectiveCollapsed && (
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Görevlerde ara..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                className="w-full h-8 pl-8 pr-3 rounded-lg bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6161FF] focus:border-transparent"
-              />
-            </div>
-          )}
 
           {/* ── ÇALIŞMA ALANI ── */}
           <SectionLabel label="Çalışma Alanı" collapsed={effectiveCollapsed} />

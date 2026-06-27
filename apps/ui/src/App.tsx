@@ -545,6 +545,10 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
 
   const filteredTasks = useMemo(() => {
     const priorityRank: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const PRIORITY_TR: Record<string, string> = { urgent: 'acil', high: 'yüksek', medium: 'orta', low: 'düşük' };
+    const STATUS_TR: Record<string, string> = {
+      brief: 'brief', 'in-progress': 'devam ediyor', review: 'inceleme', revision: 'revizyon', done: 'tamamlandı',
+    };
     let result = tasks.filter((task) => !task.archived);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -552,7 +556,11 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         (task) =>
           task.title.toLowerCase().includes(q) ||
           (task.description ?? '').toLowerCase().includes(q) ||
-          task.tags.some((tag) => tag.toLowerCase().includes(q))
+          task.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+          (task.assignee?.name ?? '').toLowerCase().includes(q) ||
+          (PRIORITY_TR[task.priority] ?? task.priority).includes(q) ||
+          (STATUS_TR[task.status] ?? task.status).includes(q) ||
+          (task.portfolioCompanyName ?? '').toLowerCase().includes(q)
       );
     }
     if (globalAssigneeFilter) {
@@ -576,6 +584,10 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
   }, [tasks, searchQuery, globalAssigneeFilter, globalStatusFilter, globalOverdueOnly, globalSortBy, globalSortDir]);
 
   const archivedTasks = useMemo(() => {
+    const PRIORITY_TR: Record<string, string> = { urgent: 'acil', high: 'yüksek', medium: 'orta', low: 'düşük' };
+    const STATUS_TR: Record<string, string> = {
+      brief: 'brief', 'in-progress': 'devam ediyor', review: 'inceleme', revision: 'revizyon', done: 'tamamlandı',
+    };
     let result = tasks.filter((task) => task.archived === true);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -583,7 +595,11 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         (task) =>
           task.title.toLowerCase().includes(q) ||
           (task.description ?? '').toLowerCase().includes(q) ||
-          task.tags.some((tag) => tag.toLowerCase().includes(q))
+          task.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+          (task.assignee?.name ?? '').toLowerCase().includes(q) ||
+          (PRIORITY_TR[task.priority] ?? task.priority).includes(q) ||
+          (STATUS_TR[task.status] ?? task.status).includes(q) ||
+          (task.portfolioCompanyName ?? '').toLowerCase().includes(q)
       );
     }
     return [...result].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
@@ -1307,8 +1323,6 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         onLogout={handleLogout}
         companyName={companyName}
         workspaceDescription={workspaceDescription}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
       />
 
       {/* Mobile Sidebar Drawer */}
@@ -1331,8 +1345,6 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               onLogout={handleLogout}
               companyName={companyName}
               workspaceDescription={workspaceDescription}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
               embedded
             />
           </div>
