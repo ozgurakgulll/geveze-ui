@@ -15,7 +15,13 @@
       "Bash(curl -s -o /dev/null -w \"UI:  %{http_code}\" http://localhost:5173/)",
       "Bash(echo \"PID: $!\")",
       "Bash(curl -s -o /dev/null -w \"API: %{http_code}\\\\n\" http://localhost:3001/api/tasks)",
-      "Bash(curl -s -o /dev/null -w \"UI:  %{http_code}\\\\n\" http://localhost:5173/)"
+      "Bash(curl -s -o /dev/null -w \"UI:  %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(git -C /Users/kazimgun/Desktop/geveze-ui add apps/ui/src/components/app/AppViewRouter.tsx apps/ui/src/components/RecentlyDeletedPage.tsx apps/ui/src/lib/api.ts apps/ui/src/App.tsx apps/api/src/modules/portfolio/portfolio.controller.ts apps/api/src/modules/portfolio/portfolio.service.ts apps/api/src/modules/portfolio/schemas/portfolio-company.schema.ts packages/shared/src/index.ts .vscode/launch.json package.json apps/api/package.json)",
+      "Bash(git -C /Users/kazimgun/Desktop/geveze-ui add apps/api/src/modules/portfolio/portfolio.controller.ts)",
+      "Bash(git -C /Users/kazimgun/Desktop/geveze-ui status)",
+      "Bash(git -C /Users/kazimgun/Desktop/geveze-ui diff --stat)",
+      "Bash(git -C /Users/kazimgun/Desktop/geveze-ui diff .claude/settings.json)",
+      "Bash(git -C /Users/kazimgun/Desktop/geveze-ui add .claude/settings.json)"
     ],
     "additionalDirectories": [
       "/Users/kazimgun/Desktop/geveze-ui"
