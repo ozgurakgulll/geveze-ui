@@ -499,7 +499,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
       api.getUsers(),
       api.getTags(workspaceId),
       api.getServiceTypes(workspaceId),
-      api.getPortfolio(workspaceId),
+      api.getPortfolio(),
       api.getSettings(workspaceId),
     ])
       .then(async ([fetchedUsers, fetchedTags, fetchedSTs, fetchedPortfolio, fetchedSettings]) => {
@@ -782,7 +782,7 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         return;
       }
       api
-        .createPortfolioCompany(payload, workspaceId)
+        .createPortfolioCompany(payload)
         .then((created) => {
           const normalized = normalizePortfolioCompany(created) ?? created;
           setPortfolioCompaniesState((prev) => [...prev, normalized]);

@@ -12,9 +12,9 @@ export class PortfolioService {
     private readonly model: Model<PortfolioCompanyDocument>,
   ) {}
 
-  async findAll(workspaceId?: string): Promise<PortfolioCompany[]> {
-    const query = workspaceId ? { workspaceId } : {};
-    const docs = await this.model.find(query).sort({ name: 1 }).lean().exec();
+  async findAll(): Promise<PortfolioCompany[]> {
+    // Portföy global — çalışma alanından bağımsız tüm şirketler listelenir
+    const docs = await this.model.find({}).sort({ name: 1 }).lean().exec();
     return docs.map(this.toCompany);
   }
 

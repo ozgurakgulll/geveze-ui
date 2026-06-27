@@ -301,13 +301,12 @@ export const updateSettings = (settings: Record<string, unknown>): Promise<void>
 
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
-export const getPortfolio = (workspaceId?: string): Promise<PortfolioCompany[]> => {
-  const qs = workspaceId ? `?workspaceId=${workspaceId}` : '';
-  return request<PortfolioCompany[]>(`/portfolio${qs}`);
-};
+// Portföy global — workspace filtresi yok
+export const getPortfolio = (): Promise<PortfolioCompany[]> =>
+  request<PortfolioCompany[]>('/portfolio');
 
-export const createPortfolioCompany = (data: unknown, workspaceId?: string): Promise<PortfolioCompany> =>
-  request<PortfolioCompany>('/portfolio', { method: 'POST', body: JSON.stringify({ ...(data as object), workspaceId }) });
+export const createPortfolioCompany = (data: unknown): Promise<PortfolioCompany> =>
+  request<PortfolioCompany>('/portfolio', { method: 'POST', body: JSON.stringify(data) });
 
 export const updatePortfolioCompany = (id: string, data: unknown): Promise<PortfolioCompany> =>
   request<PortfolioCompany>(`/portfolio/${id}`, { method: 'PUT', body: JSON.stringify(data) });
