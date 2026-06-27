@@ -20,6 +20,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
+  Download,
 } from 'lucide-react';
 import {
   PieChart,
@@ -50,6 +51,19 @@ import { tr } from 'date-fns/locale';
 import * as api from '@/lib/api';
 import type { TimeEntryStats } from '@geveze/shared';
 import { minutesToDisplay } from '@/contexts/TimerContext';
+
+function downloadCsv(filename: string, rows: string[][]): void {
+  const csv = rows
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface AnalyticsViewProps {
   tasks: Task[];
@@ -571,6 +585,23 @@ function CompanyTab({ tasks, companies, serviceTypes, onCompanySelect }: { tasks
                 <option value="services">Hizmet Sayısı</option>
                 <option value="name">İsim</option>
               </select>
+              <button
+                onClick={() => {
+                  const header = ['Şirket', 'Durum', 'Hizmetler', 'Aylık Kota', 'Görev Sayısı'];
+                  const rows = companyTableData.map(c => [
+                    c.name,
+                    PORTFOLIO_STATUS_LABELS[c.status] ?? c.status,
+                    c.servicesTaken.join('; '),
+                    String(c.totalQuota),
+                    String(c.taskCount),
+                  ]);
+                  downloadCsv(`sirket-raporu-${format(new Date(), 'yyyy-MM-dd')}.csv`, [header, ...rows]);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                CSV
+              </button>
             </div>
           </div>
         </CardHeader>
@@ -675,8 +706,19 @@ function CompanyTab({ tasks, companies, serviceTypes, onCompanySelect }: { tasks
   );
 }
 
-function ContentTab({ companies, serviceTypes }: { companies: PortfolioCompany[]; serviceTypes: string[] }) {
+function ContentTab({ tasks, companies, serviceTypes }: { tasks: Task[]; companies: PortfolioCompany[]; serviceTypes: string[] }) {
   const activeCompanies = useMemo(() => companies.filter((c) => c.status === 'active'), [companies]);
+
+  const thisMonthCompletions = useMemo(() => {
+    const monthStart = startOfMonth(new Date());
+    const map: Record<string, number> = {};
+    tasks.forEach((t) => {
+      if (t.status === 'done' && t.updatedAt >= monthStart && t.portfolioCompanyId) {
+        map[t.portfolioCompanyId] = (map[t.portfolioCompanyId] ?? 0) + 1;
+      }
+    });
+    return map;
+  }, [tasks]);
 
   const allServicesForChart = useMemo(() => {
     const fromTypes = serviceTypes.length > 0 ? serviceTypes : DEFAULT_SERVICE_TYPES;
@@ -755,6 +797,47 @@ function ContentTab({ companies, serviceTypes }: { companies: PortfolioCompany[]
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Kota vs Gerçekleşen */}
+      {activeCompanies.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Bu Ay Kota Gerçekleşme</CardTitle>
+            <p className="text-xs text-gray-400 mt-0.5">Aylık toplam kota vs bu ay tamamlanan görev sayısı</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {activeCompanies
+                .map((c) => {
+                  const quota = c.monthlyQuotas.video + c.monthlyQuotas.post + c.monthlyQuotas.story + ((c.monthlyQuotas as { render3d?: number }).render3d ?? 0);
+                  const done = thisMonthCompletions[c.id] ?? 0;
+                  const pct = quota > 0 ? Math.min(100, Math.round((done / quota) * 100)) : 0;
+                  return { c, quota, done, pct };
+                })
+                .sort((a, b) => b.quota - a.quota)
+                .map(({ c, quota, done, pct }) => (
+                  <div key={c.id} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-gray-800 truncate max-w-[160px]">{c.name}</span>
+                      <span className="text-gray-500 shrink-0 ml-2">
+                        {done}/{quota}
+                        <span className={`ml-1.5 font-semibold ${pct >= 80 ? 'text-green-600' : pct >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+                          %{pct}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${pct >= 80 ? 'bg-green-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -860,6 +943,7 @@ function TimeTab({ workspaceId }: { workspaceId?: string }) {
   return (
     <div className="space-y-6">
       {/* Tarih Aralığı Filtresi */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
         {TIME_PRESETS.map(p => (
           <button
@@ -892,6 +976,23 @@ function TimeTab({ workspaceId }: { workspaceId?: string }) {
             />
           </div>
         )}
+      </div>
+      {timeStats && timeStats.totalMinutes > 0 && (
+        <button
+          onClick={() => {
+            const header = ['Kişi', 'Saat'];
+            const rows = (timeStats.byUser ?? []).map(u => [
+              users.find(usr => usr.id === u.userId)?.name ?? u.userName,
+              (u.minutes / 60).toFixed(2),
+            ]);
+            downloadCsv(`zaman-raporu-${format(new Date(), 'yyyy-MM-dd')}.csv`, [header, ...rows]);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors shrink-0"
+        >
+          <Download className="h-3.5 w-3.5" />
+          CSV
+        </button>
+      )}
       </div>
 
       {loading && <div className="text-sm text-gray-400 py-8 text-center">Yükleniyor…</div>}
@@ -1073,7 +1174,7 @@ export function AnalyticsView({ tasks, companies, serviceTypes = [], workspaceId
             <CompanyTab tasks={tasks} companies={companies} serviceTypes={effectiveServiceTypes} onCompanySelect={onCompanySelect} />
           </TabsContent>
           <TabsContent value="content">
-            <ContentTab companies={companies} serviceTypes={effectiveServiceTypes} />
+            <ContentTab tasks={tasks} companies={companies} serviceTypes={effectiveServiceTypes} />
           </TabsContent>
           <TabsContent value="time">
             <TimeTab workspaceId={workspaceId} />
