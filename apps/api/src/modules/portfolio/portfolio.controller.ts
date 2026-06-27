@@ -14,6 +14,7 @@ import {
 import { PortfolioService } from './portfolio.service';
 import { CreatePortfolioCompanyDto, UpdatePortfolioCompanyDto } from './dto/create-portfolio-company.dto';
 import type { PortfolioCompany } from '@geveze/shared';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('portfolio')
 export class PortfolioController {
@@ -35,11 +36,13 @@ export class PortfolioController {
   }
 
   @Post()
+  @Roles('admin', 'manager')
   create(@Body() dto: CreatePortfolioCompanyDto): Promise<PortfolioCompany> {
     return this.portfolioService.create(dto);
   }
 
   @Put(':id')
+  @Roles('admin', 'manager')
   update(
     @Param('id') id: string,
     @Body() dto: UpdatePortfolioCompanyDto,
@@ -48,18 +51,21 @@ export class PortfolioController {
   }
 
   @Delete(':id')
+  @Roles('admin', 'manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {
     return this.portfolioService.remove(id);
   }
 
   @Delete(':id/permanent')
+  @Roles('admin', 'manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   permanentDelete(@Param('id') id: string): Promise<void> {
     return this.portfolioService.permanentDelete(id);
   }
 
   @Patch(':id/restore')
+  @Roles('admin', 'manager')
   restore(@Param('id') id: string): Promise<PortfolioCompany> {
     return this.portfolioService.restore(id);
   }
