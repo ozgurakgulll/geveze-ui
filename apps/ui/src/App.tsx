@@ -1307,6 +1307,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
         onLogout={handleLogout}
         companyName={companyName}
         workspaceDescription={workspaceDescription}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
       {/* Mobile Sidebar Drawer */}
@@ -1329,6 +1331,8 @@ function AuthenticatedApp({ onLogout, authUser }: { onLogout: () => void; authUs
               onLogout={handleLogout}
               companyName={companyName}
               workspaceDescription={workspaceDescription}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
               embedded
             />
           </div>
