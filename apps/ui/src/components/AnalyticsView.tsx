@@ -45,7 +45,7 @@ import { useUsers } from '@/contexts/UsersContext';
 import type { Task, PortfolioCompany } from '@/types';
 import { getTaskProgress } from '@/lib/taskProgress';
 import { getOverdueCalendarDaysFromDue, isTaskOverdue } from '@/lib/taskOverdue';
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfMonth, subDays, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import * as api from '@/lib/api';
 import type { TimeEntryStats } from '@geveze/shared';
@@ -161,7 +161,19 @@ function OverviewTab({ tasks, companies, onTaskClick }: { tasks: Task[]; compani
     const avgProgress = total > 0 ? Math.round(tasks.reduce((a, t) => a + getTaskProgress(t), 0) / total) : 0;
     const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
     const activeCompanies = companies.filter((c) => c.status === 'active').length;
-    return { total, done, inProgress, review, revision, brief, overdue, avgProgress, completionRate, activeCompanies };
+
+    // Dönem karşılaştırması: bu ay vs geçen ay
+    const now = new Date();
+    const thisMonthStart = startOfMonth(now);
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const thisMonthDone = tasks.filter((t) => t.status === 'done' && t.updatedAt >= thisMonthStart).length;
+    const lastMonthDone = tasks.filter((t) => t.status === 'done' && t.updatedAt >= lastMonthStart && t.updatedAt < thisMonthStart).length;
+    const thisMonthCreated = tasks.filter((t) => t.createdAt >= thisMonthStart).length;
+    const lastMonthCreated = tasks.filter((t) => t.createdAt >= lastMonthStart && t.createdAt < thisMonthStart).length;
+    const doneDelta = lastMonthDone > 0 ? Math.round(((thisMonthDone - lastMonthDone) / lastMonthDone) * 100) : null;
+    const createdDelta = lastMonthCreated > 0 ? Math.round(((thisMonthCreated - lastMonthCreated) / lastMonthCreated) * 100) : null;
+
+    return { total, done, inProgress, review, revision, brief, overdue, avgProgress, completionRate, activeCompanies, thisMonthDone, lastMonthDone, doneDelta, thisMonthCreated, createdDelta };
   }, [tasks, companies]);
 
   const statusPieData = useMemo(() => [
@@ -208,11 +220,23 @@ function OverviewTab({ tasks, companies, onTaskClick }: { tasks: Task[]; compani
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KpiCard title="Toplam Görev" value={stats.total} icon={<Target className="h-5 w-5 text-[#6161FF]" />} gradient />
-        <KpiCard title="Tamamlanma" value={`${stats.completionRate}%`} icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} trend={{ value: `${stats.done} görev`, positive: true }} />
+        <KpiCard
+          title="Toplam Görev"
+          value={stats.total}
+          icon={<Target className="h-5 w-5 text-[#6161FF]" />}
+          gradient
+          trend={stats.createdDelta !== null ? { value: `${stats.createdDelta > 0 ? '+' : ''}${stats.createdDelta}% bu ay`, positive: stats.createdDelta >= 0 } : undefined}
+        />
+        <KpiCard
+          title="Tamamlanan"
+          value={stats.thisMonthDone}
+          icon={<CheckCircle2 className="h-5 w-5 text-green-600" />}
+          subtitle={`geçen ay ${stats.lastMonthDone}`}
+          trend={stats.doneDelta !== null ? { value: `${stats.doneDelta > 0 ? '+' : ''}${stats.doneDelta}%`, positive: stats.doneDelta >= 0 } : undefined}
+        />
         <KpiCard title="Aktif Görev" value={stats.inProgress + stats.review + stats.revision} icon={<Clock className="h-5 w-5 text-amber-500" />} subtitle="çalışılıyor + inceleme" />
         <KpiCard title="Geciken" value={stats.overdue} icon={<AlertCircle className="h-5 w-5 text-red-500" />} trend={stats.overdue > 0 ? { value: `${stats.overdue} görev`, positive: false } : undefined} />
-        <KpiCard title="Ort. İlerleme" value={`${stats.avgProgress}%`} icon={<TrendingUp className="h-5 w-5 text-[#6161FF]" />} />
+        <KpiCard title="Ort. İlerleme" value={`${stats.avgProgress}%`} icon={<TrendingUp className="h-5 w-5 text-[#6161FF]" />} subtitle={`${stats.completionRate}% tamamlanma oranı`} />
         <KpiCard title="Aktif Şirket" value={stats.activeCompanies} icon={<Building2 className="h-5 w-5 text-[#6161FF]" />} subtitle={`${companies.length} toplam`} />
       </div>
 
@@ -498,7 +522,7 @@ function CompanyTab({ tasks, companies, serviceTypes, onCompanySelect }: { tasks
         <KpiCard title="Toplam Şirket" value={companies.length} icon={<Building2 className="h-5 w-5 text-[#6161FF]" />} gradient />
         <KpiCard title="Aktif" value={portfolioStatusData.find((d) => d.name === 'Aktif')?.value ?? 0} icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} />
         <KpiCard title="Beklemede" value={portfolioStatusData.find((d) => d.name === 'Beklemede')?.value ?? 0} icon={<Clock className="h-5 w-5 text-amber-500" />} />
-        <KpiCard title="Churn Oranı" value={`${churnData.churnRate}%`} icon={<AlertCircle className="h-5 w-5 text-red-500" />} trend={churnData.churnRate > 15 ? { value: `${churnData.left.length} ayrıldı`, positive: false } : undefined} />
+        <KpiCard title="Kayıp Oranı" value={`${churnData.churnRate}%`} icon={<AlertCircle className="h-5 w-5 text-red-500" />} subtitle={`${churnData.left.length} şirket ayrıldı`} trend={churnData.churnRate > 15 ? { value: 'Yüksek', positive: false } : undefined} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -770,56 +794,122 @@ function ContentTab({ companies, serviceTypes }: { companies: PortfolioCompany[]
   );
 }
 
+type TimePreset = 7 | 30 | 90 | 'custom';
+
+const TIME_PRESETS: { label: string; value: TimePreset }[] = [
+  { label: 'Bu Hafta', value: 7 },
+  { label: 'Bu Ay', value: 30 },
+  { label: 'Son 3 Ay', value: 90 },
+  { label: 'Özel', value: 'custom' },
+];
+
+function getPresetRange(preset: TimePreset): { from: string; to: string } {
+  const now = new Date();
+  const to = format(endOfDay(now), 'yyyy-MM-dd');
+  if (preset === 7) return { from: format(startOfDay(subDays(now, 7)), 'yyyy-MM-dd'), to };
+  if (preset === 30) return { from: format(startOfMonth(now), 'yyyy-MM-dd'), to };
+  if (preset === 90) return { from: format(startOfDay(subDays(now, 90)), 'yyyy-MM-dd'), to };
+  return { from: '', to: '' };
+}
+
 function TimeTab({ workspaceId }: { workspaceId?: string }) {
   const users = useUsers();
+  const [preset, setPreset] = useState<TimePreset>(30);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [timeStats, setTimeStats] = useState<TimeEntryStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Aktif from/to: preset veya custom
+  const activeDateRange = useMemo(() => {
+    if (preset !== 'custom') return getPresetRange(preset);
+    if (customFrom && customTo && customFrom <= customTo) return { from: customFrom, to: customTo };
+    return null;
+  }, [preset, customFrom, customTo]);
+
   useEffect(() => {
-    const now = new Date();
-    const from = format(startOfMonth(now), 'yyyy-MM-dd');
-    const to = format(now, 'yyyy-MM-dd');
-    api.getTimeStats({ workspaceId, from, to })
-      .then(setTimeStats)
-      .catch(() => setTimeStats(null))
-      .finally(() => setLoading(false));
-  }, [workspaceId]);
+    if (!activeDateRange) return;
+    let cancelled = false;
+    setLoading(true);
+    api.getTimeStats({ workspaceId, from: activeDateRange.from, to: activeDateRange.to })
+      .then((data) => { if (!cancelled) setTimeStats(data); })
+      .catch(() => { if (!cancelled) setTimeStats(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [workspaceId, activeDateRange]);
 
-  if (loading) {
-    return <div className="text-sm text-gray-400 py-12 text-center">Yükleniyor…</div>;
-  }
-
-  if (!timeStats || timeStats.totalMinutes === 0) {
-    return (
-      <div className="text-sm text-gray-400 py-16 text-center">
-        Bu ay henüz kayıtlı süre yok. Görevlerde zamanlayıcıyı başlatarak süre ekleyin.
-      </div>
-    );
-  }
-
-  const byUserChartData = timeStats.byUser.map(u => ({
-    name: users.find(usr => usr.id === u.userId)?.name ?? u.userId,
+  const byUserChartData = (timeStats?.byUser ?? []).map(u => ({
+    name: users.find(usr => usr.id === u.userId)?.name ?? u.userName,
     saat: +(u.minutes / 60).toFixed(1),
   }));
 
-  const byPortfolioChartData = timeStats.byPortfolio.slice(0, 8).map(p => ({
+  const byPortfolioChartData = (timeStats?.byPortfolio ?? []).slice(0, 8).map(p => ({
     name: p.portfolioCompanyName.length > 12 ? p.portfolioCompanyName.slice(0, 12) + '…' : p.portfolioCompanyName,
     saat: +(p.minutes / 60).toFixed(1),
   }));
 
-  const byDayChartData = timeStats.byDay.slice(-14).map(d => ({
-    gün: format(new Date(d.date), 'd MMM', { locale: tr }),
+  const byDayChartData = (timeStats?.byDay ?? []).map(d => ({
+    gün: format(new Date(d.date + 'T12:00:00'), 'd MMM', { locale: tr }),
     saat: +(d.minutes / 60).toFixed(1),
   }));
 
+  const periodLabel = preset !== 'custom'
+    ? TIME_PRESETS.find(p => p.value === preset)?.label ?? ''
+    : (customFrom && customTo ? `${customFrom} – ${customTo}` : '');
+
   return (
     <div className="space-y-6">
+      {/* Tarih Aralığı Filtresi */}
+      <div className="flex flex-wrap items-center gap-2">
+        {TIME_PRESETS.map(p => (
+          <button
+            key={String(p.value)}
+            onClick={() => setPreset(p.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              preset === p.value
+                ? 'bg-[#6161FF] text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+        {preset === 'custom' && (
+          <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={e => setCustomFrom(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#6161FF]/40"
+            />
+            <span className="text-xs text-gray-400">–</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={e => setCustomTo(e.target.value)}
+              min={customFrom}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#6161FF]/40"
+            />
+          </div>
+        )}
+      </div>
+
+      {loading && <div className="text-sm text-gray-400 py-8 text-center">Yükleniyor…</div>}
+
+      {!loading && (!timeStats || timeStats.totalMinutes === 0) && (
+        <div className="text-sm text-gray-400 py-12 text-center">
+          {periodLabel ? `"${periodLabel}" döneminde` : 'Seçilen dönemde'} kayıtlı süre yok.
+        </div>
+      )}
+
+      {!loading && timeStats && timeStats.totalMinutes > 0 && (
+      <>
       {/* KPI satırı */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-4">
             <p className="text-2xl font-bold text-gray-900">{minutesToDisplay(timeStats.totalMinutes)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Bu ay toplam</p>
+            <p className="text-xs text-gray-500 mt-0.5">{periodLabel} toplam</p>
           </CardContent>
         </Card>
         <Card>
@@ -927,6 +1017,8 @@ function TimeTab({ workspaceId }: { workspaceId?: string }) {
             </div>
           </CardContent>
         </Card>
+      )}
+      </>
       )}
     </div>
   );
